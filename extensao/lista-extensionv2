@@ -1,0 +1,84 @@
+// Dynatrace Workflow - Custom Code Action (JavaScript)
+// Script para inventário de extensões no Dynatrace via API
+// Objetivos: Contar extensões, status (ativo/desativado), status OK/NOK, tecnologias, e tipo (cloud ou não)
+
+const axios = require('axios');
+
+// Configuração básica - idealmente viria de um input do workflow
+const configData = {
+  requests_data: [
+    {
+      name: "ClienteA",
+      url: "https://SEU_AMBIENTE.live.dynatrace.com",
+      token: "DT_API_TOKEN"
+    }
+  ]
+};
+
+const fromTime = '2024-10-20T12:45:00-03:00';
+const toTime = '2024-10-22T13:16:00-03:00';
+
+async function fetchData(clientInfo, fromTime, toTime) {
+  const { name: cliente, url, token } = clientInfo;
+  const headers = {
+    'accept': 'application/json; charset=utf-8',
+    'Authorization': `Api-Token ${token}`
+  };
+
+  const apiUrl = `${url}/api/v2/metrics/query?metricSelector=(dsfm:extension.config.status:splitBy(\"dt.extension.name\",\"dt.extension.config.id\",\"dt.extension.status\",\"dt.extension.technology\",\"dt.extension.type\"):sort(value(auto,descending)):limit(500)):names&from=${fromTime}&to=${toTime}&resolution=Inf`;
+
+  try {
+    const response = await axios.get(apiUrl, { headers });
+    const clientData = [];
+
+    if (response.data?.result?.[0]?.data) {
+      console.log(`--- ${cliente}: Coletando informações ---`);
+      for (const entry of response.data.result[0].data) {
+        const dimensions = entry.dimensionMap;
+        const extName = dimensions['dt.extension.name'] || 'desconhecido';
+        const status = dimensions['dt.extension.status'] === 'OK' ? 'OK' : 'NOK';
+        const tecnologia = dimensions['dt.extension.technology'] || 'desconhecida';
+        const tipo = dimensions['dt.extension.type'] || 'não informado';
+
+        clientData.push({
+          Cliente: cliente,
+          Extensao: extName,
+          Status: status,
+          Tecnologia: tecnologia,
+          Tipo: tipo,
+          DataVerificacao: new Date().toLocaleDateString('pt-BR')
+        });
+      }
+    }
+
+    return clientData;
+  } catch (error) {
+    console.error(`Erro para ${cliente}:`, error.message);
+    return [{
+      Cliente: cliente,
+      Extensao: null,
+      Status: 'Falha na solicitação',
+      Tecnologia: '-',
+      Tipo: '-',
+      DataVerificacao: new Date().toLocaleDateString('pt-BR')
+    }];
+  }
+}
+
+async function main() {
+  console.log('Iniciando execução no Dynatrace Workflow...');
+  let relatorioFinal = [];
+
+  for (const clientInfo of configData.requests_data) {
+    const dados = await fetchData(clientInfo, fromTime, toTime);
+    relatorioFinal = relatorioFinal.concat(dados);
+  }
+
+  // Aqui você pode usar esse JSON pra criar uma visualização externa ou enviar pra dashboard custom
+  console.log('Relatório final:', JSON.stringify(relatorioFinal, null, 2));
+  return relatorioFinal;
+}
+
+exports.handler = async function () {
+  return await main();
+};
