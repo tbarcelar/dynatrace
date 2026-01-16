@@ -1,0 +1,128 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #06b6d4 100%);
+    min-height: 100vh;
+    color: #1e293b;
+}
+
+/* HEADER */
+header {
+    background: rgba(15, 23, 42, 0.98);
+    backdrop-filter: blur(25px);
+    color: white;
+    padding: 2rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+    opacity: 0.95;
+    font-size: 1.1rem;
+}
+
+/* LAYOUT */
+.container {
+    display: flex;
+    height: calc(100vh - 140px);
+    max-width: 1800px;
+    margin: 0 auto;
+}
+
+aside {
+    width: 380px;
+    background: rgba(255, 255, 255, 0.97);
+    padding: 2.5rem;
+    overflow-y: auto;
+    border-right: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* FILTER */
+.filter-group {
+    margin-bottom: 2.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border-radius: 20px;
+}
+
+label {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+select {
+    width: 100%;
+    padding: 1rem;
+    border-radius: 16px;
+    border: 3px solid #e2e8f0;
+    font-size: 1rem;
+}
+
+/* CATEGORY LIST */
+.categories-list {
+    list-style: none;
+}
+
+.category-item {
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.category-item:hover {
+    transform: translateY(-4px);
+}
+
+.category-item.active {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+}
+
+/* MAIN */
+main {
+    flex: 1;
+    padding: 3rem;
+    overflow: hidden;
+}
+
+.operations-header {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+}
+
+/* CODE */
+.code-display {
+    margin-top: 2.5rem;
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 2.5rem;
+    border-radius: 28px;
+    font-family: monospace;
+    min-height: 350px;
+}
+
+.placeholder {
+    text-align: center;
+    color: #64748b;
+}

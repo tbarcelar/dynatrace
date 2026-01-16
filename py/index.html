@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynatrace API Explorer v2</title>
+
+    <!-- CSS externo -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>🚀 Dynatrace API Explorer</h1>
+    <p class="subtitle">Todos os endpoints v2 organizados por categoria com código Python pronto</p>
+</header>
+
+<div class="container">
+    <aside>
+        <div class="filter-group">
+            <label>🔍 Filtrar Categoria</label>
+            <select id="filterSelect">
+                <option value="">📋 Todas as categorias</option>
+                <option value="problems">🚨 Problems</option>
+                <option value="hosts">🖥️ Hosts</option>
+                <option value="oneagent">🔧 OneAgent</option>
+                <option value="services">🌐 Services</option>
+                <option value="databases">🗄️ Databases</option>
+            </select>
+        </div>
+
+        <div class="section-title">📂 Operações Disponíveis</div>
+        <ul class="categories-list" id="categoryList">
+            <li class="placeholder">Selecione uma categoria no filtro acima</li>
+        </ul>
+    </aside>
+
+    <main>
+        <div class="operations-header" id="operationsHeader">
+            Selecione uma categoria para ver todas as operações disponíveis
+        </div>
+
+        <ul class="operations-list" id="operationList"></ul>
+
+        <div class="code-display" id="codeBlock">
+            <div class="placeholder">
+                Clique em uma operação para ver o código Python completo<br>
+                <small>✅ Token, headers e exemplos reais do Dynatrace v2</small>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- JS externo -->
+<script src="script.js"></script>
+</body>
+</html>
