@@ -1,0 +1,1655 @@
+{
+    "version": 20,
+    "variables": [
+        {
+            "version": 2,
+            "key": "Applications",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.application\n| fields entity.name\n| append [fetch dt.entity.mobile_application | fields entity.name]\n| append [fetch dt.entity.custom_application | fields entity.name]\n| sort entity.name asc",
+            "multiple": true
+        },
+        {
+            "version": 2,
+            "key": "KPI",
+            "type": "csv",
+            "visible": false,
+            "editable": true,
+            "input": "Duration,VisuallyCompleteTime,SpeedIndex,LoadEventEnd,FirstInputDelay,CumulativeLayoutShift,LargestContentfulPaint,CdnBusyTime,CdnResources,DocumentInteractiveTime,DomCompleteTime,DomContentLoadedTime,FirstPartyBusyTime,FirstPartyResources,FrontendTime,LoadEventStart,NavigationStart,NetworkTime,RequestStart,ResponseEnd,ResponseStart,ServerTime,ThirdPartyBusyTime,ThirdPartyResources",
+            "multiple": false,
+            "defaultValue": "VisuallyCompleteTime"
+        },
+        {
+            "version": 2,
+            "key": "Aggregate",
+            "type": "csv",
+            "visible": false,
+            "editable": true,
+            "input": "Avg,Median",
+            "multiple": false
+        },
+        {
+            "version": 2,
+            "key": "TimeShift",
+            "type": "csv",
+            "visible": false,
+            "editable": true,
+            "input": "1,7,14,21",
+            "multiple": false
+        }
+    ],
+    "tiles": {
+        "0": {
+            "type": "markdown",
+            "content": "## 📊👤 Digital Experience - Performance Analysis (Frontend)\n---"
+        },
+        "36": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT count(distinct userSessionId) FROM usersession WHERE useraction.application=\\\"\"+$Applications+\"\\\"\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Active Users",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "AccountFilledIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "45": {
+            "title": "",
+            "type": "data",
+            "query": "fetch events, from:now() - 24h, to:now()\n| filter event.status == \"CLOSED\" AND dt.entity.application.name == $Applications\n//dt.source_entity.type == \"application\" AND \n| summarize problemCount = count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Closed Issues",
+                    "recordField": "problemCount",
+                    "colorThresholdTarget": "background",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "problemCount",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-03-default, #2a7453)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "46": {
+            "title": "",
+            "type": "data",
+            "query": "fetch events, from:now() - 24h, to:now()\n//| filter dt.source_entity.type == \"application\" AND event.status == \"ACTIVE\"\n| filter event.status == \"ACTIVE\" AND dt.entity.application.name == $Applications\n| summarize problemCount = count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Open Issues",
+                    "recordField": "problemCount",
+                    "isIconVisible": true,
+                    "prefixIcon": "NotificationActiveIcon",
+                    "colorThresholdTarget": "background",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "problemCount",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-03-default, #2a7453)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "47": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT COUNT(*) from usersession  WHERE useraction.application=\\\"\"+$Applications+\"\\\"\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Number of Sessions",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "AccountIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "58": {
+            "title": "Application health",
+            "type": "data",
+            "query": "fetch dt.entity.application\n| append [fetch dt.entity.mobile_application]\n| append [fetch dt.entity.custom_application]\n| lookup [\n  fetch dt.davis.problems\n  | filter event.status == \"ACTIVE\" //AND dt.entity.application.name == $Applications\n  | expand affected_entity_ids\n], sourceField:id, lookupField:affected_entity_ids\n| fieldsAdd affected = if(isNotNull(lookup.affected_entity_ids), \"yes\", else: \"no\")\n| fields affected, id, name = entity.name, event.id = lookup.event.id, event.kind = lookup.event.kind",
+            "visualization": "honeycomb",
+            "visualizationSettings": {
+                "honeycomb": {
+                    "truncationMode": "middle",
+                    "dataMappings": {
+                        "value": "name"
+                    },
+                    "displayedFields": [
+                        "affected",
+                        "id",
+                        "name"
+                    ],
+                    "colorPalette": "apdex"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "59": {
+            "title": "Response Time",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  // Calculate Chart Interval\n  const timeDiff = (endTime-startTime)/3600/1000/24;\n  var chartInterval = \"1m\"\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  var usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' limit 5000';\n  if ($ActionType==\"Key\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and keyuseraction is true limit 5000';\n  if ($ActionType==\"Entry\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isentryaction is true  limit 5000';\n  if ($ActionType==\"Exit\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isexitaction is true limit 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length-5;\n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        Date: response.values[index][0],\n        'Traffic': response.values[index][1],\n        'Response Time': response.values[index][2]/1000      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         Date: { type: 'timestamp' },\n          'Traffic': { type: 'double' },\n          'Response Time': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-09-default, #649438)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-14-default, #d56b1a)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-12-default, #cd3741)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "Response Time",
+                        "unitCategory": "time",
+                        "baseUnit": "second",
+                        "displayUnit": null,
+                        "decimals": 1,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1701281148734
+                    }
+                ],
+                "table": {
+                    "sortBy": [
+                        {
+                            "columnId": "[\"Date\"]",
+                            "direction": "ascending"
+                        }
+                    ]
+                }
+            }
+        },
+        "60": {
+            "title": "Number of Requests",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  // Calculate Chart Interval\n  const timeDiff = (endTime-startTime)/3600/1000/24;\n  var chartInterval = \"1m\"\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  var usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' limit 5000';\n  if ($ActionType==\"Key\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and keyuseraction is true limit 5000';\n  if ($ActionType==\"Entry\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isentryaction is true  limit 5000';\n  if ($ActionType==\"Exit\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(duration) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isexitaction is true limit 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length-5;\n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        Date: response.values[index][0],\n        'Number of Requests': response.values[index][1],\n        'Duration': response.values[index][2]/1000      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         Date: { type: 'timestamp' },\n          'Number of Requests': { type: 'double' },\n          'Duration': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "barChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "xAxisLabel": "Date",
+                    "xAxisScaling": "auto",
+                    "seriesOverrides": [
+                        {
+                            "seriesId": [
+                                "Traffic"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-01-default, #134fc9)"
+                                }
+                            }
+                        },
+                        {
+                            "seriesId": [
+                                "Number of Requests"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-05-default, #134fc9)"
+                                }
+                            }
+                        }
+                    ],
+                    "fieldMapping": {
+                        "leftAxisValues": [
+                            "Number of Requests"
+                        ],
+                        "timestamp": "Date"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-09-default, #649438)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-14-default, #d56b1a)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-12-default, #cd3741)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "Number of Requests",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1701281148734
+                    }
+                ],
+                "dataMapping": {
+                    "displayedFields": [
+                        "Number of Requests"
+                    ]
+                }
+            }
+        },
+        "67": {
+            "type": "markdown",
+            "content": "## 🚨👤 Digital Experience - Failure Analysis and Alerts\n---\nAnalysis of application logs and generated Alerts"
+        },
+        "68": {
+            "type": "markdown",
+            "content": "## 📈🌎👤 Digital Experience - Insights & Geo\n---\nInsights, Geolocation and comparison over time"
+        },
+        "76": {
+            "title": "Application - JavaScript Errors",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  // Calculate Chart Interval\n  const timeDiff = (endTime-startTime)/3600/1000/24;\n  var chartInterval = \"1m\"\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  var usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(javascripterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' limit 5000';\n  if ($ActionType==\"Key\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(javascripterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and keyuseraction is true limit 5000';\n  if ($ActionType==\"Entry\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(javascripterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isentryaction is true  limit 5000';\n  if ($ActionType==\"Exit\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(javascripterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isexitaction is true limit 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length-5;\n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        Date: response.values[index][0],\n        'Traffic': response.values[index][1],\n        'Errors': response.values[index][2]*100      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         Date: { type: 'timestamp' },\n          'Traffic': { type: 'double' },\n          'Errors': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "areaChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "xAxisLabel": "Date",
+                    "xAxisScaling": "auto",
+                    "seriesOverrides": [
+                        {
+                            "seriesId": [
+                                "Errors"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-security-risk-level-critical-default, #8a0012)"
+                                }
+                            }
+                        },
+                        {
+                            "seriesId": [
+                                "Traffic"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-01-default, #134fc9)"
+                                }
+                            }
+                        }
+                    ],
+                    "fieldMapping": {
+                        "leftAxisValues": [
+                            "Errors"
+                        ],
+                        "timestamp": "Date"
+                    },
+                    "gapPolicy": "connect"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-09-default, #649438)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-14-default, #d56b1a)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-12-default, #cd3741)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "Errors",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1701281148734
+                    }
+                ]
+            }
+        },
+        "77": {
+            "title": "Application - Requests with Errors",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  // Calculate Chart Interval\n  const timeDiff = (endTime-startTime)/3600/1000/24;\n  var chartInterval = \"1m\"\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  var usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(requesterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' limit 5000';\n  if ($ActionType==\"Key\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(requesterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and keyuseraction is true limit 5000';\n  if ($ActionType==\"Entry\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(requesterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isentryaction is true  limit 5000';\n  if ($ActionType==\"Exit\") usqlQuery = 'SELECT DISTINCT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", count(*) AS \"Count\", avg(requesterrorcount) AS \"Duration\" from useraction WHERE useraction.application in ('+appsList+') and usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' and isexitaction is true limit 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length-5;\n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        Date: response.values[index][0],\n        'Traffic': response.values[index][1],\n        'Errors': response.values[index][2]*100      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         Date: { type: 'timestamp' },\n          'Traffic': { type: 'double' },\n          'Errors': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "areaChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "xAxisLabel": "Date",
+                    "xAxisScaling": "auto",
+                    "seriesOverrides": [
+                        {
+                            "seriesId": [
+                                "Errors"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-security-risk-level-critical-default, #8a0012)"
+                                }
+                            }
+                        },
+                        {
+                            "seriesId": [
+                                "Traffic"
+                            ],
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-01-default, #134fc9)"
+                                }
+                            }
+                        }
+                    ],
+                    "fieldMapping": {
+                        "leftAxisValues": [
+                            "Errors"
+                        ],
+                        "timestamp": "Date"
+                    },
+                    "gapPolicy": "connect"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-09-default, #649438)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-14-default, #d56b1a)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-color-12-default, #cd3741)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "Errors",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1701281148734
+                    }
+                ]
+            }
+        },
+        "78": {
+            "title": "$Aggregate $KPI (Comparison)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n\nexport default async function () {\n  const last30Days = (Math.round(new Date().getTime() / 1000)- (720 * 3600))*1000;\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const kpiName = $KPI;\n  const aggName = $Aggregate;\n  const usqlQuery = 'select distinct name as \"User Action\",CONDITION ('+$Aggregate+'('+$KPI+'),WHERE starttime>='+startTime+' and endtime<='+endTime+') as \"Duration(s)\", CONDITION ('+$Aggregate+'('+$KPI+'),WHERE starttime>=('+startTime+' - DURATION(\"7d\")) and (endtime<='+endTime+' - DURATION(\"7d\"))) as \"7 Day Shift\", CONDITION ('+$Aggregate+'('+$KPI+'),WHERE starttime>=('+startTime+' - DURATION(\"14d\")) and (endtime<='+endTime+' - DURATION(\"14d\"))) as \"14 Day Shift\", CONDITION ('+$Aggregate+'('+$KPI+'),WHERE starttime>=('+startTime+' - DURATION(\"21d\")) and (endtime<='+endTime+' - DURATION(\"21d\"))) as \"21 Day Shift\" from useraction where application in ('+appsList+') order by Duration(s) DESC limit 5000';\n  const response = await  rumUserSessionsClient.getUsqlResultAsTable({ query: usqlQuery,offsetUtc: -240,startTimestamp:last30Days });\n  const sampleCount = response.values.length;\n  var str7 = \"\";\n  var str14 = \"\";\n  var str21 = \"\";\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n    if (response.values[index][1]>response.values[index][2]) \n      str7 = ((response.values[index][1]-response.values[index][2])/1000).toFixed(2)+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][2]) \n      str7 = ((response.values[index][1]-response.values[index][2])*(-1)/1000).toFixed(2)+\" ↘️🟢\";  \n    else\n      str7 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][3]) \n      str14 = ((response.values[index][1]-response.values[index][3])/1000).toFixed(2)+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][3]) \n      str14 = ((response.values[index][1]-response.values[index][3])*(-1)/1000).toFixed(2)+\" ↘️🟢\";  \n    else\n      str14 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][4]) \n      str21 = ((response.values[index][1]-response.values[index][4])/1000).toFixed(2)+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][4]) \n      str21 = ((response.values[index][1]-response.values[index][4])*(-1)/1000).toFixed(2)+\" ↘️🟢\";  \n    else\n      str21 = \"0 =🟡\";  \n      return {\n        'User Actions': response.values[index][0],\n        'Requests': response.values[index][1],\n        '7 Days': str7,  \n        '14 Days': str14,  \n        '21 Days': str21  \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         \n          'User Actions': { type: 'string' },\n          'Requests': { type: 'double' },\n          '7 Days': { type: 'string' },\n          '14 Days': { type: 'string' },\n          '21 Days': { type: 'string' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnOrder": [
+                        "[\"User Actions\"]",
+                        "[\"Requests\"]",
+                        "[\"7 Days\"]",
+                        "[\"14 Days\"]",
+                        "[\"21 Days\"]"
+                    ]
+                },
+                "thresholds": []
+            }
+        },
+        "79": {
+            "title": "Requests over time (Comparison)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n\nexport default async function () {\n  const last30Days = (Math.round(new Date().getTime() / 1000)- (720 * 3600))*1000;\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const usqlQuery = 'select distinct name as \"User Action\",CONDITION (count(*),WHERE starttime>='+startTime+' and endtime<='+endTime+') as \"Requests\", CONDITION (count(*),WHERE starttime>=('+startTime+' - DURATION(\"7d\")) and (endtime<='+endTime+' - DURATION(\"7d\"))) as \"7 Day Shift\", CONDITION (count(*),WHERE starttime>=('+startTime+' - DURATION(\"14d\")) and (endtime<='+endTime+' - DURATION(\"14d\"))) as \"14 Day Shift\", CONDITION (count(*),WHERE starttime>=('+startTime+' - DURATION(\"21d\")) and (endtime<='+endTime+' - DURATION(\"21d\"))) as \"21 Day Shift\" from useraction where application in ('+appsList+') order by Requests DESC limit 5000';\n  const response = await  rumUserSessionsClient.getUsqlResultAsTable({ query: usqlQuery,offsetUtc: -240,startTimestamp:last30Days });\n  const sampleCount = response.values.length;\n  var str7 = \"\";\n  var str14 = \"\";\n  var str21 = \"\";\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n    if (response.values[index][1]>response.values[index][2]) \n      str7 = response.values[index][1]-response.values[index][2]+\" ↗️🟢\";  \n    else if (response.values[index][1]<response.values[index][2]) \n      str7 = (response.values[index][1]-response.values[index][2])*(-1)+\" ↘️🔴\";  \n    else\n      str7 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][3]) \n      str14 = response.values[index][1]-response.values[index][3]+\" ↗️🟢\";  \n    else if (response.values[index][1]<response.values[index][3]) \n      str14 = (response.values[index][1]-response.values[index][3])*(-1)+\" ↘️🔴\";  \n    else\n      str14 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][4]) \n      str21 = response.values[index][1]-response.values[index][4]+\" ↗️🟢\";  \n    else if (response.values[index][1]<response.values[index][4]) \n      str21 = (response.values[index][1]-response.values[index][4])*(-1)+\" ↘️🔴\";  \n    else\n      str21 = \"0 =🟡\";  \n      return {\n        'User Actions': response.values[index][0],\n        'Requests': response.values[index][1],\n        '7 Days': str7,  \n        '14 Days': str14,  \n        '21 Days': str21  \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         \n          'User Actions': { type: 'string' },\n          'Requests': { type: 'double' },\n          '7 Days': { type: 'string' },\n          '14 Days': { type: 'string' },\n          '21 Days': { type: 'string' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnOrder": [
+                        "[\"User Actions\"]",
+                        "[\"Requests\"]",
+                        "[\"7 Days\"]",
+                        "[\"14 Days\"]",
+                        "[\"21 Days\"]"
+                    ]
+                },
+                "thresholds": []
+            }
+        },
+        "80": {
+            "title": "Request Errors (Comparison)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n\nexport default async function () {\n  const last30Days = (Math.round(new Date().getTime() / 1000)- (720 * 3600))*1000;\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const usqlQuery = 'select distinct name as \"User Action\",CONDITION (sum(requestErrorCount),WHERE starttime>='+startTime+' and endtime<='+endTime+') as \"Errors\", CONDITION (sum(requestErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"7d\")) and (endtime<='+endTime+' - DURATION(\"7d\"))) as \"7 Day Shift\", CONDITION (sum(requestErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"14d\")) and (endtime<='+endTime+' - DURATION(\"14d\"))) as \"14 Day Shift\", CONDITION (sum(requestErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"21d\")) and (endtime<='+endTime+' - DURATION(\"21d\"))) as \"21 Day Shift\" from useraction where application in ('+appsList+') and requesterrorcount>0 order by Errors DESC limit 5000';\n  const response = await  rumUserSessionsClient.getUsqlResultAsTable({ query: usqlQuery,offsetUtc: -240,startTimestamp:last30Days });\n  const sampleCount = response.values.length;\n  var str7 = \"\";\n  var str14 = \"\";\n  var str21 = \"\";\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n    if (response.values[index][1]>response.values[index][2]) \n      str7 = response.values[index][1]-response.values[index][2]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][2]) \n      str7 = (response.values[index][1]-response.values[index][2])*(-1)+\" ↘️🟢\";  \n    else\n      str7 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][3]) \n      str14 = response.values[index][1]-response.values[index][3]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][3]) \n      str14 = (response.values[index][1]-response.values[index][3])*(-1)+\" ↘️🟢\";  \n    else\n      str14 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][4]) \n      str21 = response.values[index][1]-response.values[index][4]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][4]) \n      str21 = (response.values[index][1]-response.values[index][4])*(-1)+\" ↘️🟢\";  \n    else\n      str21 = \"0 =🟡\";  \n      return {\n        'User Actions': response.values[index][0],\n        'Requests': response.values[index][1],\n        '7 Days': str7,  \n        '14 Days': str14,  \n        '21 Days': str21  \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         \n          'User Actions': { type: 'string' },\n          'Requests': { type: 'double' },\n          '7 Days': { type: 'string' },\n          '14 Days': { type: 'string' },\n          '21 Days': { type: 'string' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnOrder": [
+                        "[\"User Actions\"]",
+                        "[\"Requests\"]",
+                        "[\"7 Days\"]",
+                        "[\"14 Days\"]",
+                        "[\"21 Days\"]"
+                    ]
+                },
+                "thresholds": []
+            }
+        },
+        "81": {
+            "title": "JavaScript Errors (Comparison)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n\nexport default async function () {\n  const last30Days = (Math.round(new Date().getTime() / 1000)- (720 * 3600))*1000;\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const usqlQuery = 'select distinct name as \"User Action\",CONDITION (sum(javascriptErrorCount),WHERE starttime>='+startTime+' and endtime<='+endTime+') as \"Errors\", CONDITION (sum(javascriptErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"7d\")) and (endtime<='+endTime+' - DURATION(\"7d\"))) as \"7 Day Shift\", CONDITION (sum(javascriptErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"14d\")) and (endtime<='+endTime+' - DURATION(\"14d\"))) as \"14 Day Shift\", CONDITION (sum(javascriptErrorCount),WHERE starttime>=('+startTime+' - DURATION(\"21d\")) and (endtime<='+endTime+' - DURATION(\"21d\"))) as \"21 Day Shift\" from useraction where application in ('+appsList+') and javascripterrorcount>0 order by Errors DESC limit 5000';\n  const response = await  rumUserSessionsClient.getUsqlResultAsTable({ query: usqlQuery,offsetUtc: -240,startTimestamp:last30Days });\n  const sampleCount = response.values.length;\n  var str7 = \"\";\n  var str14 = \"\";\n  var str21 = \"\";\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n    if (response.values[index][1]>response.values[index][2]) \n      str7 = response.values[index][1]-response.values[index][2]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][2]) \n      str7 = (response.values[index][1]-response.values[index][2])*(-1)+\" ↘️🟢\";  \n    else\n      str7 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][3]) \n      str14 = response.values[index][1]-response.values[index][3]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][3]) \n      str14 = (response.values[index][1]-response.values[index][3])*(-1)+\" ↘️🟢\";  \n    else\n      str14 = \"0 =🟡\";  \n    if (response.values[index][1]>response.values[index][4]) \n      str21 = response.values[index][1]-response.values[index][4]+\" ↗️🔴\";  \n    else if (response.values[index][1]<response.values[index][4]) \n      str21 = (response.values[index][1]-response.values[index][4])*(-1)+\" ↘️🟢\";  \n    else\n      str21 = \"0 =🟡\";  \n      return {\n        'User Actions': response.values[index][0],\n        'Requests': response.values[index][1],\n        '7 Days': str7,  \n        '14 Days': str14,  \n        '21 Days': str21  \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         \n          'User Actions': { type: 'string' },\n          'Requests': { type: 'double' },\n          '7 Days': { type: 'string' },\n          '14 Days': { type: 'string' },\n          '21 Days': { type: 'string' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnOrder": [
+                        "[\"User Actions\"]",
+                        "[\"Requests\"]",
+                        "[\"7 Days\"]",
+                        "[\"14 Days\"]",
+                        "[\"21 Days\"]"
+                    ]
+                },
+                "thresholds": []
+            }
+        },
+        "82": {
+            "title": "Apdex - User Experience (%)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  \n  const usqlQuery = 'select distinct userExperienceScore, count(*) FROM usersession where starttime>='+startTime+' and endtime<='+endTime+' and useraction.application in ('+appsList+') order by count(*) DESC LIMIT 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length;\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        'UX': response.values[index][0],\n        'Count': response.values[index][1]      \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n          'UX': { type: 'string' },\n          'Count': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "donutChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "categoryOverrides": {
+                        "TOLERATED": {
+                            "color": "#FCD53F",
+                            "added": 1704218817580
+                        },
+                        "FRUSTRATED": {
+                            "color": "#F8312F",
+                            "added": 1704218825451
+                        },
+                        "SATISFIED": {
+                            "color": {
+                                "Default": "var(--dt-colors-charts-apdex-excellent-default, #2a7453)"
+                            },
+                            "added": 1704218828719
+                        }
+                    },
+                    "categoricalBarChartSettings": {
+                        "categoryAxis": [
+                            "UX"
+                        ]
+                    },
+                    "circleChartSettings": {
+                        "valueType": "relative",
+                        "groupingThresholdType": "relative"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "83": {
+            "title": "User Experience (over time)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\nexport default async function () {\n  const lastXDays = 30;                                         // Big bucket\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  // Calculate Chart Interval\n  const timeDiff = (endTime-startTime)/3600/1000/24;\n  var chartInterval = \"5m\"\n  if (timeDiff>.5)\n    var chartInterval = \"10m\"\n  if (timeDiff>1)\n    var chartInterval = \"1h\"\n  const query = 'SELECT DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") AS \"Date\", CONDITION(count(*), where userExperienceScore=\"SATISFIED\")  AS \"Satisfied\", CONDITION(count(*), where userExperienceScore=\"TOLERATED\")  AS \"Tolerated\", CONDITION(count(*), where userExperienceScore=\"FRUSTRATED\")  AS \"Frustrated\" from usersession WHERE useraction.application in ('+appsList+') and  usersession.starttime>='+startTime+' and usersession.endtime<='+endTime+' GROUP BY  DATETIME(endTime,  \"MM-dd HH:mm:ss\",\"'+chartInterval+'\") limit 5000';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length;\n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        Date: response.values[index][0],\n        'Satisfied': (response.values[index][1]),\n        'Tolerated': response.values[index][2],\n        'Frustrated': response.values[index][3]\n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n         Date: { type: 'timestamp' },\n          'Satisfied': { type: 'double' },\n          'Tolerated': { type: 'double' },\n          'Frustrated': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "areaChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "hidden": true
+                    },
+                    "xAxisLabel": "Date",
+                    "xAxisScaling": "auto",
+                    "colorPalette": "purple",
+                    "seriesOverrides": [
+                        {
+                            "seriesId": "Frustrated",
+                            "override": {
+                                "color": "#F8312F"
+                            }
+                        },
+                        {
+                            "seriesId": "Tolerated",
+                            "override": {
+                                "color": "#FCD53F"
+                            }
+                        },
+                        {
+                            "seriesId": "Satisfied",
+                            "override": {
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-apdex-excellent-default, #2a7453)"
+                                }
+                            }
+                        }
+                    ],
+                    "fieldMapping": {
+                        "leftAxisValues": [
+                            "Satisfied",
+                            "Tolerated",
+                            "Frustrated"
+                        ],
+                        "timestamp": "Date"
+                    },
+                    "gapPolicy": "connect"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "86": {
+            "title": "Geo - Total Access by City",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  \n  const usqlQuery = 'SELECT city, count(*) FROM usersession where starttime>='+startTime+' and endtime<='+endTime+' and useraction.application in ('+appsList+') AND city is not null AND city NOT IS(\"synthetic\") GROUP BY city ORDER by count(*) DESC LIMIT 10';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length;\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        'Location': response.values[index][0],\n        'Total': response.values[index][1]      \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n          'Location': { type: 'string' },\n          'Total': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "categoricalBarChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "colorPalette": "purple",
+                    "categoryOverrides": {},
+                    "categoricalBarChartSettings": {
+                        "categoryAxisLabel": "Location",
+                        "categoryAxis": [
+                            "Location"
+                        ],
+                        "valueAxis": [
+                            "Total"
+                        ],
+                        "valueAxisLabel": "Total"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "87": {
+            "title": "Geo - Access by Region (%)",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  \n  const usqlQuery = 'SELECT region, count(*) FROM usersession where starttime>='+startTime+' and endtime<='+endTime+' and useraction.application in ('+appsList+') AND region is not null AND region NOT IS (\"synthetic\") GROUP BY region ORDER by count(*) DESC LIMIT 10';\n  const response = await rumUserSessionsClient.getUsqlResultAsTable({query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime});\n  const sampleCount = response.values.length;\n  \n  return {\n    records: new Array(sampleCount).fill(null).map((_, index, array) => {\n      return {\n        'Location': response.values[index][0],\n        'Total': response.values[index][1]      \n      };\n    }),\n    types: [\n      {\n        indexRange: [0, sampleCount],\n        mappings: {\n          'Location': { type: 'string' },\n          'Total': { type: 'double' }\n        },\n      },\n    ],\n  };\n}",
+            "visualization": "donutChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    },
+                    "colorPalette": "purple",
+                    "categoryOverrides": {},
+                    "categoricalBarChartSettings": {
+                        "categoryAxis": [
+                            "Location"
+                        ]
+                    },
+                    "circleChartSettings": {
+                        "valueType": "relative",
+                        "groupingThresholdType": "relative"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "90": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT count(*) from useraction WHERE useraction.application=\\\"\"+$Applications+\"\\\" AND javaScriptErrorCount >=1 or requestErrorCount >=1\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Errors HTTP & Js",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "PublicExposureIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "element",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6863)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "91": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT  COUNT(*) FROM usersession WHERE useraction.application=\\\"\"+$Applications+\"\\\" AND numberOfRageClicks>=1\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Rage Clicks",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "PublicExposureOffIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "element",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6863)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "92": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT AVG(duration) from useraction WHERE useraction.application =\\\"\"+$Applications+\"\\\"\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Response Time (ms)",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "LineChartIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "element",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-05-default, #134fc9)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "element",
+                        "unitCategory": "time",
+                        "baseUnit": "millisecond",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1749039780486
+                    }
+                ]
+            }
+        },
+        "93": {
+            "title": "Apdex",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (count(*),WHERE apdexCategory=\"SATISFIED\" and starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (count(*),WHERE apdexCategory=\"TOLERATING\" and starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (count(*),WHERE apdexCategory=\"FRUSTRATED\" and starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (count(*),WHERE apdexCategory=\"SATISFIED\" and starttime>='+startShiftTime+' and endtime<='+endShiftTime+'), CONDITION (count(*),WHERE apdexCategory=\"TOLERATING\" and starttime>='+startShiftTime+' and endtime<='+endShiftTime+'), CONDITION (count(*),WHERE apdexCategory=\"FRUSTRATED\" and starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM useraction WHERE useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2]) - (result[\"values\"][0][3] + (result[\"values\"][0][4]/2))/(result[\"values\"][0][3] + result[\"values\"][0][4] + result[\"values\"][0][5])).toFixed(2);\n  if ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2]) > (result[\"values\"][0][3] + (result[\"values\"][0][4]/2))/(result[\"values\"][0][3] + result[\"values\"][0][4] + result[\"values\"][0][5])) \n   return ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2])).toFixed(2)+\" (\"+str1+\" ↗️🟢)\";\n  else if ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2]) < (result[\"values\"][0][3] + (result[\"values\"][0][4]/2))/(result[\"values\"][0][3] + result[\"values\"][0][4] + result[\"values\"][0][5]))\n   return ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2])).toFixed(2)+\" (\"+str1*(-1)+\" ↘️🔴)\";\n  else\n   return ((result[\"values\"][0][0] + (result[\"values\"][0][1]/2))/(result[\"values\"][0][0] + result[\"values\"][0][1] + result[\"values\"][0][2])).toFixed(2)+\" (\"+str1+\" =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "94": {
+            "title": "Requests",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (count(*),WHERE starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (count(*),WHERE starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM useraction WHERE useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = ((result[\"values\"][0][0]-result[\"values\"][0][1])/((result[\"values\"][0][0]+result[\"values\"][0][1])/2)*100).toFixed(2);\n  if ((result[\"values\"][0][0])>(result[\"values\"][0][1])) \n   return result[\"values\"][0][0]+\" (\"+str1+\"% ↗️🟢)\";\n  else if ((result[\"values\"][0][0])<(result[\"values\"][0][1])) \n   return result[\"values\"][0][0]+\" (\"+str1*(-1)+\"% ↘️🔴)\";\n  else\n   return result[\"values\"][0][0]+\" (\"+str1+\"% =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "95": {
+            "title": "Avg Duration",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (avg(duration),WHERE starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (avg(duration),WHERE starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM useraction WHERE useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = (result[\"values\"][0][0]-result[\"values\"][0][1]);\n  var dur = (result[\"values\"][0][0]/1000).toFixed(2);\n  if ((result[\"values\"][0][0])>(result[\"values\"][0][1])) \n   return dur+\"s  (\"+(str1/1000).toFixed(2)+\"s ↗️🔴)\";\n  else if ((result[\"values\"][0][0])<(result[\"values\"][0][1])) \n   return dur+\"s  (\"+(str1/1000).toFixed(2)*(-1)+\"s ↘️🟢)\";\n  else\n   return dur+\"s  (\"+(str1/1000).toFixed(2)+\"s =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "96": {
+            "title": "Sessions",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (count(*),WHERE starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (count(*),WHERE starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM usersession where useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = (result[\"values\"][0][0]-result[\"values\"][0][1]);\n  if ((result[\"values\"][0][0])>(result[\"values\"][0][1])) \n   return result[\"values\"][0][0]+\" (\"+(str1)+\" ↗️🟢)\";\n  else if ((result[\"values\"][0][0])<(result[\"values\"][0][1])) \n   return result[\"values\"][0][0]+\" (\"+(str1)*(-1)+\" ↘️🔴)\";\n  else\n   return result[\"values\"][0][0]+\" (\"+(str1)+\" =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "105": {
+            "title": "",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Convert datetime string to timestamp in milliseconds\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\n// Transform data to the desired format\nfunction transformFormatSingleValue(data) {\n  return data.values[0];\n}\n\n// Fetch user session data\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n\n  const data = await rumUserSessionsClient.getUsqlResultAsTree({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n\n  return data;\n}\n\nexport default async function () {\n  const query = \"SELECT count(*) FROM useraction WHERE useraction.application=\\\"\"+$Applications+\"\\\"\";\n  const data = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  return transformFormatSingleValue(data);\n}\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "label": "Total Requests",
+                    "recordField": "element",
+                    "isIconVisible": true,
+                    "prefixIcon": "GroupIcon",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "106": {
+            "title": "Avg JavaScript Error",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (avg(javascriptErrorCount),WHERE starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (avg(javascriptErrorCount),WHERE starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM useraction WHERE useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = (result[\"values\"][0][0]-result[\"values\"][0][1]).toFixed(2);\n  var err = (result[\"values\"][0][0]).toFixed(2);\n  if ((result[\"values\"][0][0])>(result[\"values\"][0][1])) \n   return err+\" (\"+(str1)+\" ↗️🔴)\";\n  else if ((result[\"values\"][0][0])<(result[\"values\"][0][1])) \n   return err+\" (\"+(str1)*(-1)+\" ↘️🟢)\";\n  else\n   return err+\" (\"+(str1)+\" =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "107": {
+            "title": "Avg Requests Error",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from '@dynatrace-sdk/client-classic-environment-v1';\nexport default async function () {\n  const startTime = Date.parse($dt_timeframe_from).toString();  // Get Dashboard Start Time\n  const endTime = Date.parse($dt_timeframe_to).toString();      // Get Dashboard End Time\n  const startShiftTime = startTime-(86400000*$TimeShift);       // Get TimeShift variable, convert to days and create startShift\n  const endShiftTime = endTime-(86400000*$TimeShift);           // Get TimeShift variable, convert to days and create endShift\n  var appsList = \"\\\"\"+$Applications[0]+\"\\\"\";\n  let i = 1;\n  // Build Apps List\n  while (i < 10) {\n    if ($Applications[i]==null) break;\n    appsList = appsList+\",\\\"\"+$Applications[i]+\"\\\"\";\n    i++;\n  }\n  const query = 'SELECT CONDITION (avg(requestErrorCount),WHERE starttime>='+startTime+' and endtime<='+endTime+'), CONDITION (avg(requestErrorCount),WHERE starttime>='+startShiftTime+' and endtime<='+endShiftTime+') FROM useraction WHERE useraction.application in ('+appsList+')';\n  const result = await rumUserSessionsClient.getUsqlResultAsTable({query: query, startTimestamp: startShiftTime, endTimestamp: endTime});\n  var str1 = (result[\"values\"][0][0]-result[\"values\"][0][1]).toFixed(2);\n  var err = (result[\"values\"][0][0]).toFixed(2);\n  if ((result[\"values\"][0][0])>(result[\"values\"][0][1])) \n   return err+\" (\"+(str1)+\" ↗️🔴)\";\n  else if ((result[\"values\"][0][0])<(result[\"values\"][0][1])) \n   return err+\" (\"+(str1)*(-1)+\" ↘️🟢)\";\n  else\n   return err+\" (\"+(str1)+\" =🟡)\";\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "element",
+                    "recordField": "element",
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "thresholds": []
+            }
+        },
+        "108": {
+            "title": "Alerts - 🔴 Open x 🟢 Closed",
+            "type": "data",
+            "query": "fetch events, from:now() - 7d, to:now()\n//| filter dt.source_entity.type == \"application\" AND event.status == \"ACTIVE\"\n//| filter event.status == \"ACTIVE\" AND \n| filter in (dt.entity.application.name , $Applications)\n\n// --Start\n| fieldsAdd status = if((event.status == \"ACTIVE\"),\"🔴 OPEN\", \n                else:if((event.status == \"CLOSED\"), \"🟢 CLOSED\"))\n| fieldsKeep timestamp, status, event.group_label, dt.entity.application.name, event.name, event.description  \n//------------------\n//| summarize problemCount = count()\n| sort timestamp desc\n| limit 100\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnWidths": {
+                        "[\"dt.entity.application.name\"]": 172
+                    },
+                    "columnTypeOverrides": [
+                        {
+                            "fields": [
+                                "content"
+                            ],
+                            "id": 1748640240949,
+                            "value": "log-content"
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"error\",\"message\"]",
+                        "[\"error\",\"details\"]",
+                        "[\"error\",\"code\"]"
+                    ]
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 100,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "109": {
+            "title": "Logs - 🔴Error or 🟡 Warn Status - Application",
+            "type": "data",
+            "query": "fetch logs\n\n| filter in (content, $Applications) AND status == \"ERROR\" OR status == \"WARN\"\n//| filter loglevel == \"ERROR\" or loglevel == \"SEVERE\" AND matchesPhrase(content, \"$Applications\")\n\n//===== NEW\n| fieldsAdd status = if((status == \"ERROR\"),\"🔴 ERROR\", \n            else:if((status == \"WARN\"), \"🟡 WARN\"))\n| fieldsKeep timestamp, status, process.technology, dt.process.name, content\n\n//=========\n\n| sort timestamp desc\n| limit 100\n\n ",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "columnTypeOverrides": [
+                        {
+                            "fields": [
+                                "content"
+                            ],
+                            "id": 1748640240949,
+                            "value": "log-content"
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"timestamp\"]",
+                        "[\"content\"]",
+                        "[\"status\"]"
+                    ]
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 100,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "110": {
+            "title": "Geo Map by Region",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\n// Cache start\nconst regionData = new Map([\n    [\"Pernambuco\", { lat: -8.05428, lon: -34.88126 }],\n    [\"São Paulo\", { lat: -23.5505, lon: -46.6333 }],\n    [\"Ceará\", { lat: -3.7172, lon: -38.5434 }],\n    [\"Bahia\", { lat: -12.9714, lon: -38.5014 }],\n    [\"Illinois\", { lat: 40.6331, lon: -89.3985 }],\n    [\"South Carolina\", { lat: 33.8361, lon: -81.1637 }],\n    [\"Pomerania\", { lat: 54.3520, lon: 18.6466 }],\n]);\n\n// Mapping regions to countries, capitals and standard coordinates\nconst regionMapping = {\n    \"Pernambuco\": { country: \"Brazil\", capital: \"Recife\", defaultLat: -8.05428, defaultLon: -34.88126 },\n    \"São Paulo\": { country: \"Brazil\", capital: \"São Paulo\", defaultLat: -23.5505, defaultLon: -46.6333 },\n    \"Ceará\": { country: \"Brazil\", capital: \"Fortaleza\", defaultLat: -3.7172, defaultLon: -38.5434 },\n    \"Bahia\": { country: \"Brazil\", capital: \"Salvador\", defaultLat: -12.9714, defaultLon: -38.5014 },\n    \"Alagoas\": { country: \"Brazil\", capital: \"Maceió\", defaultLat: -9.6658, defaultLon: -35.7353 },\n    \"Paraíba\": { country: \"Brazil\", capital: \"João Pessoa\", defaultLat: -7.1153, defaultLon: -34.8631 },\n    \"Rio Grande do Sul\": { country: \"Brazil\", capital: \"Porto Alegre\", defaultLat: -30.0331, defaultLon: -51.23 },\n    \"Rio de Janeiro\": { country: \"Brazil\", capital: \"Rio de Janeiro\", defaultLat: -22.9068, defaultLon: -43.1729 },\n    \"Illinois\": { country: \"United States\", capital: \"Springfield\", defaultLat: 40.6331, defaultLon: -89.3985 },\n    \"South Carolina\": { country: \"United States\", capital: \"Columbia\", defaultLat: 33.8361, defaultLon: -81.1637 },\n    \"Virginia\": { country: \"United States\", capital: \"Richmond\", defaultLat: 37.5407, defaultLon: -77.4360 },\n    \"Florida\": { country: \"United States\", capital: \"Tallahassee\", defaultLat: 30.4383, defaultLon: -84.2807 },\n    \"North Rhine-Westphalia\": { country: \"Germany\", capital: \"Düsseldorf\", defaultLat: 51.2277, defaultLon: 6.7735 },\n    \"Kujawsko-Pomorskie\": { country: \"Poland\", capital: \"Toruń\", defaultLat: 53.0138, defaultLon: 18.5984 },\n    \"Kent\": { country: \"United Kingdom\", capital: \"Maidstone\", defaultLat: 51.2704, defaultLon: 0.5207 },\n    \"Hesse\": { country: \"Germany\", capital: \"Wiesbaden\", defaultLat: 50.0782, defaultLon: 8.2397 },\n    \"Zhejiang\": { country: \"China\", capital: \"Hangzhou\", defaultLat: 30.2741, defaultLon: 120.1551 },\n    \"Saxony-Anhalt\": { country: \"Germany\", capital: \"Magdeburg\", defaultLat: 52.1312, defaultLon: 11.5036 },\n    \"Shanghai\": { country: \"China\", capital: \"Shanghai\", defaultLat: 31.2304, defaultLon: 121.4737 },\n    \"Pennsylvania\": { country: \"United States\", capital: \"Harrisburg\", defaultLat: 40.2732, defaultLon: -76.8867 },\n    \"Mazovia\": { country: \"Poland\", capital: \"Warsaw\", defaultLat: 52.2297, defaultLon: 21.0122 },\n    \"Pomerania\": { country: \"Poland\", capital: \"Gdańsk\", defaultLat: 54.3520, defaultLon: 18.6466 },\n    \"California\": { country: \"United States\", capital: \"Sacramento\", defaultLat: 38.5816, defaultLon: -121.4944 },\n    \"Bavaria\": { country: \"Germany\", capital: \"Munich\", defaultLat: 48.1371, defaultLon: 11.5761 },\n    \"West Pomerania\": { country: \"Poland\", capital: \"Szczecin\", defaultLat: 53.4285, defaultLon: 14.5528 },\n    \"Texas\": { country: \"United States\", capital: \"Austin\", defaultLat: 30.2672, defaultLon: -97.7431 },\n    \"Ontario\": { country: \"Canada\", capital: \"Toronto\", defaultLat: 43.6532, defaultLon: -79.3832 },\n    \"Gwynedd\": { country: \"United Kingdom\", capital: \"Caernarfon\", defaultLat: 53.1390, defaultLon: -4.2731 },\n    \"Baden-Wurttemberg\": { country: \"Germany\", capital: \"Stuttgart\", defaultLat: 48.7758, defaultLon: 9.1829 }\n};\n\n// Function to add delay between requests\nconst delay = ms => new Promise(resolve => setTimeout(resolve, ms));\n\n// Function to query Nominatim with retry (API)\nasync function fetchNominatim(query, region, retries = 3, backoff = 2000) {\n  for (let attempt = 1; attempt <= retries; attempt++) {\n    try {\n      await delay(backoff * attempt); // Exponential delay: 2000ms, 4000ms, 6000ms\n      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1&state=${encodeURIComponent(region)}`, {\n        headers: { 'User-Agent': 'Dynatrace-Script/1.0' }\n      });\n      if (!response.ok) {\n        throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);\n      }\n      const data = await response.json();\n      console.log(`Nominatim response for ${query}:`, JSON.stringify(data, null, 2));\n      return data;\n    } catch (error) {\n      console.error(`Attempt ${attempt}/${retries} failed for ${query}:`, error.message);\n      if (attempt === retries) {\n        console.error(`All retries failed for ${query}`);\n        return null;\n      }\n    }\n  }\n  return null;\n}\n\nasync function getCoordinates(region) {\n  if (!region || typeof region !== 'string' || !region.trim()) {\n    console.warn(`Invalid region: ${region}`);\n    return { lat: null, lon: null };\n  }\n\n  // Check cache\n  if (regionData.has(region)) {\n    const cached = regionData.get(region);\n    console.log(`Coordinates found for ${region} in cache: Lat=${cached.lat}, Lon=${cached.lon}`);\n    return { lat: Number(cached.lat), lon: Number(cached.lon) };\n  }\n\n  // Lookup in mapping\n  const regionInfo = regionMapping[region] || { country: region, capital: region, defaultLat: null, defaultLon: null };\n  console.log(`Mapping for ${region}: country=${regionInfo.country}, capital=${regionInfo.capital}, defaultLat=${regionInfo.defaultLat}, defaultLon=${regionInfo.defaultLon}`);\n\n  // Use default coordinates if available\n  if (regionInfo.defaultLat != null && regionInfo.defaultLon != null) {\n    console.log(`Using default coordinates for ${region}: Lat=${regionInfo.defaultLat}, Lon=${regionInfo.defaultLon}`);\n    regionData.set(region, { lat: regionInfo.defaultLat, lon: regionInfo.defaultLon });\n    return { lat: Number(regionInfo.defaultLat), lon: Number(regionInfo.defaultLon) };\n  }\n\n  // Fetch coordinates from Nominatim if not in mapping\n  try {\n    const query = `${regionInfo.capital}, ${regionInfo.country}`;\n    const data = await fetchNominatim(query, region);\n    if (data?.length && data[0].lat && data[0].lon) {\n      const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);\n      if (!isNaN(lat) && lat >= -90 && lat <= 90 && !isNaN(lon) && lon >= -180 && lon <= 180) {\n        console.log(`Coordinates found for ${region} via ${query}: Lat=${lat}, Lon=${lon}`);\n        regionData.set(region, { lat, lon });\n        return { lat: Number(lat), lon: Number(lon) };\n      }\n    }\n    console.warn(`No valid coordinates found for ${region} via Nominatim, skipping plotting`);\n    return { lat: null, lon: null };\n  } catch (error) {\n    console.error(`Error fetching coordinates for ${region}:`, error.message);\n    return { lat: null, lon: null };\n  }\n}\n\nexport default async function () {\n  if (!$dt_timeframe_from || !$dt_timeframe_to || !$Applications?.length) {\n    console.error(\"Error: Invalid dashboard variables\", { dt_timeframe_from: $dt_timeframe_from, dt_timeframe_to: $dt_timeframe_to, Applications: $Applications });\n    return { records: [], types: [], error: \"Invalid or missing dashboard variables\" };\n  }\n\n  const [startTime, endTime] = [Date.parse($dt_timeframe_from), Date.parse($dt_timeframe_to)].map(t => t.toString());\n  const appsList = $Applications.map(app => `\"${app}\"`).join(',') || null;\n\n  if (!appsList) {\n    console.error(\"Error: Application list is empty\");\n    return { records: [], types: [], error: \"No valid application provided\" };\n  }\n  \n// Build USQLQuery\n  \n  const usqlQuery = `\n    SELECT region, count(*) \n    FROM usersession \n    WHERE starttime >= ${startTime} \n    AND endtime <= ${endTime} \n    AND useraction.application IN (${appsList}) \n    AND region IS NOT NULL \n    AND region != 'synthetic' \n    GROUP BY region \n    ORDER BY count(*) DESC \n    LIMIT 10\n  `;\n\n  try {\n    const response = await rumUserSessionsClient.getUsqlResultAsTable({ query: usqlQuery, startTimestamp: startTime, endTimestamp: endTime });\n    if (!response.values.length) {\n      console.warn(\"No data returned by the USQL query\");\n      return { records: [], types: [], warning: \"No region data found\" };\n    }\n\n    const records = [];\n    for (const [regionName, totalAccesses] of response.values) {\n      if (!regionName || typeof regionName !== 'string' || !regionName.trim()) {\n        console.warn(`Invalid region name: ${regionName}`);\n        continue;\n      }\n      const { lat, lon } = await getCoordinates(regionName);\n      // Skip records with null coordinates to avoid plotting at (0,0)\n      if (lat == null || lon == null) {\n        console.warn(`Skipping ${regionName} due to null coordinates`);\n        continue;\n      }\n      console.log(`Adding record for ${regionName}: Lat=${lat}, Lon=${lon}, Type=(${typeof lat}, ${typeof lon})`);\n      records.push({ Location: regionName, Total: Number(totalAccesses), Latitude: lat, Longitude: lon });\n    }\n\n    if (!records.length) {\n      console.warn(\"No valid records found\");\n      return { records: [], types: [], warning: \"No valid records found\" };\n    }\n\n    return {\n      records,\n      types: [{\n        indexRange: [0, records.length],\n        mappings: { Location: { type: \"string\" }, Total: { type: \"long\" }, Latitude: { type: \"double\" }, Longitude: { type: \"double\" } },\n        schema: { Location: \"string\", Total: \"long\", Latitude: \"double\", Longitude: \"double\" }\n      }],\n      metadata: { description: \"Access data by region with latitude and longitude\", columns: [{ name: \"Location\", type: \"string\" }, { name: \"Total\", type: \"long\" }, { name: \"Latitude\", type: \"double\" }, { name: \"Longitude\", type: \"double\" }] }\n    };\n  } catch (error) {\n    console.error(\"Error executing USQL query:\", error.message);\n    return { records: [], types: [], error: \"Failed to execute query in Dynatrace\" };\n  }\n}",
+            "visualization": "bubbleMap",
+            "visualizationSettings": {
+                "dataMapping": {
+                    "latitude": "Latitude",
+                    "longitude": "Longitude",
+                    "radius": "Total",
+                    "dimension": "Total",
+                    "displayedFields": [
+                        "Location"
+                    ]
+                },
+                "legend": {
+                    "textTruncationMode": "middle"
+                },
+                "colorModeType": {
+                    "numericColorPalette": "purple"
+                },
+                "tooltip": {
+                    "showCustomFields": true
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            }
+        },
+        "114": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "115": {
+            "title": "Error pela Tim ",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n  \n  const data = await rumUserSessionsClient.getUsqlResultAsTable({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n  \n  return data;\n}\n\nfunction transformTableToObjects(tableData) {\n  const result = [];\n  \n  if (tableData && tableData.columnNames && tableData.values) {\n    const columns = tableData.columnNames;\n    \n    tableData.values.forEach(row => {\n      const obj = {};\n      columns.forEach((colName, index) => {\n        obj[colName] = row[index];\n      });\n      result.push(obj);\n    });\n  }\n  \n  return result;\n}\n\nexport default async function () {\n  const apps = Array.isArray($Applications) \n    ? $Applications.map(a => `'${a}'`).join(',') \n    : `'${$Applications}'`;\n\n  const query = `SELECT COUNT(isp) AS total_erros\n                 FROM usersession\n                 WHERE totalErrorCount > 0\n                 AND isp LIKE '%TIM%'\n                 AND (\n                    useraction.application IN (${apps})\n                    OR userevent.application IN (${apps})\n                    OR usererror.application IN (${apps})\n                 )`;\n                \n  const rawData = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  \n  const tableData = transformTableToObjects(rawData);\n  \n  return tableData;\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [],
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_erros",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768587595274
+                    }
+                ]
+            }
+        },
+        "116": {
+            "title": "Error pela Claro",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n  \n  const data = await rumUserSessionsClient.getUsqlResultAsTable({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n  \n  return data;\n}\n\nfunction transformTableToObjects(tableData) {\n  const result = [];\n  \n  if (tableData && tableData.columnNames && tableData.values) {\n    const columns = tableData.columnNames;\n    \n    tableData.values.forEach(row => {\n      const obj = {};\n      columns.forEach((colName, index) => {\n        obj[colName] = row[index];\n      });\n      result.push(obj);\n    });\n  }\n  \n  return result;\n}\n\nexport default async function () {\n  const apps = Array.isArray($Applications) \n    ? $Applications.map(a => `'${a}'`).join(',') \n    : `'${$Applications}'`;\n\n  const query = `SELECT COUNT(isp) AS total_erros\n                 FROM usersession\n                 WHERE totalErrorCount > 0\n                 AND isp LIKE '%Claro%'\n                 AND (\n                    useraction.application IN (${apps})\n                    OR userevent.application IN (${apps})\n                    OR usererror.application IN (${apps})\n                 )`;\n                \n  const rawData = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  \n  const tableData = transformTableToObjects(rawData);\n  \n  return tableData;\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [],
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_erros",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768587595274
+                    }
+                ]
+            }
+        },
+        "117": {
+            "title": "Error pela Vivo",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n  \n  const data = await rumUserSessionsClient.getUsqlResultAsTable({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n  \n  return data;\n}\n\nfunction transformTableToObjects(tableData) {\n  const result = [];\n  \n  if (tableData && tableData.columnNames && tableData.values) {\n    const columns = tableData.columnNames;\n    \n    tableData.values.forEach(row => {\n      const obj = {};\n      columns.forEach((colName, index) => {\n        obj[colName] = row[index];\n      });\n      result.push(obj);\n    });\n  }\n  \n  return result;\n}\n\nexport default async function () {\n  const apps = Array.isArray($Applications) \n    ? $Applications.map(a => `'${a}'`).join(',') \n    : `'${$Applications}'`;\n\n  const query = `SELECT COUNT(isp) AS total_erros\n                 FROM usersession\n                 WHERE totalErrorCount > 0\n                 AND isp LIKE '%Vivo%'\n                 AND (\n                    useraction.application IN (${apps})\n                    OR userevent.application IN (${apps})\n                    OR usererror.application IN (${apps})\n                 )`;\n                \n  const rawData = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  \n  const tableData = transformTableToObjects(rawData);\n  \n  return tableData;\n}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [],
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_erros",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768587595274
+                    }
+                ]
+            }
+        },
+        "118": {
+            "title": "Sessao Travada - ",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n  \n  const data = await rumUserSessionsClient.getUsqlResultAsTable({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n  \n  return data;\n}\n\nfunction transformTableToObjects(tableData) {\n  const result = [];\n  \n  if (tableData && tableData.columnNames && tableData.values) {\n    const columns = tableData.columnNames;\n    \n    tableData.values.forEach(row => {\n      const obj = {};\n      columns.forEach((colName, index) => {\n        obj[colName] = row[index];\n      });\n      result.push(obj);\n    });\n  }\n  \n  return result;\n}\n\nexport default async function () {\n  const apps = Array.isArray($Applications) \n    ? $Applications.map(a => `'${a}'`).join(',') \n    : `'${$Applications}'`;\n\n  const query = `SELECT userSessionId AS user_session, \n                        userId AS user, \n                        isp AS operadora,\n                        duration, \n                        userActionCount AS user_action_count\n                 FROM usersession\n                 WHERE userActionCount = 1\n                 AND duration > 120000 \n                 AND isp IS NOT NULL\n                 AND (\n                    useraction.application IN (${apps})\n                    OR userevent.application IN (${apps})\n                    OR usererror.application IN (${apps})\n                 )\n                 ORDER BY duration DESC\n                 LIMIT 50`;\n                \n  const rawData = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  \n  const tableData = transformTableToObjects(rawData);\n  \n  return tableData;\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "hideColumnsForLargeResults": false,
+                    "sortBy": [
+                        {
+                            "columnId": "[\"duration\"]",
+                            "direction": "descending"
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"user_session\"]",
+                        "[\"user\"]",
+                        "[\"operadora\"]",
+                        "[\"duration\"]",
+                        "[\"user_action_count\"]"
+                    ],
+                    "hiddenColumns": [
+                        [
+                            "user_session"
+                        ],
+                        [
+                            "user_action_count"
+                        ]
+                    ],
+                    "columnWidths": {
+                        "[\"user\"]": 88.3,
+                        "[\"operadora\"]": 111.19,
+                        "[\"duration\"]": 95.19
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [],
+                "unitsOverrides": [
+                    {
+                        "identifier": "duration",
+                        "unitCategory": "time",
+                        "baseUnit": "millisecond",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768587595274
+                    }
+                ]
+            }
+        },
+        "119": {
+            "title": "Total_Sessoes_Por_Operadora ",
+            "type": "code",
+            "input": "import { rumUserSessionsClient } from \"@dynatrace-sdk/client-classic-environment-v1\";\n\nfunction toTimestamp(datetime) {\n  return Date.parse(datetime);\n}\n\nasync function fetchUserSessionData(query, from, to) {\n  const startTimestamp = toTimestamp(from);\n  const endTimestamp = toTimestamp(to);\n  \n  const data = await rumUserSessionsClient.getUsqlResultAsTable({\n    startTimestamp,\n    endTimestamp,\n    query,\n  });\n  \n  return data;\n}\n\nfunction transformTableToObjects(tableData) {\n  const result = [];\n  \n  if (tableData && tableData.columnNames && tableData.values) {\n    const columns = tableData.columnNames;\n    \n    tableData.values.forEach(row => {\n      const obj = {};\n      columns.forEach((colName, index) => {\n        obj[colName] = row[index];\n      });\n      result.push(obj);\n    });\n  }\n  \n  return result;\n}\n\nexport default async function () {\n  // Converte a seleção da variável 'Applications' para o formato IN do USQL\n  const apps = Array.isArray($Applications) \n    ? $Applications.map(a => `'${a}'`).join(',') \n    : `'${$Applications}'`;\n\n  const query = `SELECT isp AS operadora,\n                        COUNT(isp) AS total_sessoes,\n                        AVG(userActionCount) AS media_actions\n                 FROM usersession\n                 WHERE isp IS NOT NULL\n                 AND (\n                    useraction.application IN (${apps})\n                    OR userevent.application IN (${apps})\n                    OR usererror.application IN (${apps})\n                 )\n                 GROUP BY isp\n                 ORDER BY total_sessoes DESC\n                 LIMIT 6`;\n                \n  // Utiliza as variáveis globais de tempo do dashboard\n  const rawData = await fetchUserSessionData(query, $dt_timeframe_from, $dt_timeframe_to);\n  \n  const tableData = transformTableToObjects(rawData);\n  \n  return tableData;\n}",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "hideColumnsForLargeResults": false,
+                    "columnOrder": [
+                        "[\"operadora\"]",
+                        "[\"total_sessoes\"]",
+                        "[\"media_actions\"]"
+                    ]
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [],
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_sessoes",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768587595274
+                    }
+                ]
+            }
+        },
+        "125": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "126": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "127": {
+            "type": "markdown",
+            "content": "\n[Service](https://xx.apps.dynatrace.com/ui/document/v0/#share=xxx)\n\n[Geral](https://xx.apps.dynatrace.com/ui/document/v0/#share=xxx)\n\n[Relatorio de Problemas](https://xxx.apps.dynatrace.com/ui/document/v0/#share=xxx)"
+        }
+    },
+    "layouts": {
+        "0": {
+            "x": 9,
+            "y": 0,
+            "w": 14,
+            "h": 2
+        },
+        "36": {
+            "x": 8,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "45": {
+            "x": 8,
+            "y": 9,
+            "w": 4,
+            "h": 3
+        },
+        "46": {
+            "x": 8,
+            "y": 12,
+            "w": 4,
+            "h": 3
+        },
+        "47": {
+            "x": 12,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "58": {
+            "x": 0,
+            "y": 2,
+            "w": 8,
+            "h": 7
+        },
+        "59": {
+            "x": 13,
+            "y": 9,
+            "w": 6,
+            "h": 6
+        },
+        "60": {
+            "x": 20,
+            "y": 9,
+            "w": 12,
+            "h": 6
+        },
+        "67": {
+            "x": 0,
+            "y": 36,
+            "w": 32,
+            "h": 2
+        },
+        "68": {
+            "x": 0,
+            "y": 15,
+            "w": 32,
+            "h": 2
+        },
+        "76": {
+            "x": 21,
+            "y": 43,
+            "w": 11,
+            "h": 5
+        },
+        "77": {
+            "x": 21,
+            "y": 38,
+            "w": 11,
+            "h": 5
+        },
+        "78": {
+            "x": 0,
+            "y": 32,
+            "w": 16,
+            "h": 4
+        },
+        "79": {
+            "x": 0,
+            "y": 28,
+            "w": 16,
+            "h": 4
+        },
+        "80": {
+            "x": 16,
+            "y": 28,
+            "w": 16,
+            "h": 4
+        },
+        "81": {
+            "x": 16,
+            "y": 32,
+            "w": 16,
+            "h": 4
+        },
+        "82": {
+            "x": 0,
+            "y": 9,
+            "w": 8,
+            "h": 6
+        },
+        "83": {
+            "x": 0,
+            "y": 24,
+            "w": 16,
+            "h": 4
+        },
+        "86": {
+            "x": 24,
+            "y": 17,
+            "w": 8,
+            "h": 7
+        },
+        "87": {
+            "x": 16,
+            "y": 17,
+            "w": 8,
+            "h": 7
+        },
+        "90": {
+            "x": 24,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "91": {
+            "x": 28,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "92": {
+            "x": 20,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "93": {
+            "x": 16,
+            "y": 24,
+            "w": 5,
+            "h": 2
+        },
+        "94": {
+            "x": 27,
+            "y": 24,
+            "w": 5,
+            "h": 2
+        },
+        "95": {
+            "x": 21,
+            "y": 26,
+            "w": 6,
+            "h": 2
+        },
+        "96": {
+            "x": 16,
+            "y": 26,
+            "w": 5,
+            "h": 2
+        },
+        "105": {
+            "x": 16,
+            "y": 2,
+            "w": 4,
+            "h": 3
+        },
+        "106": {
+            "x": 27,
+            "y": 26,
+            "w": 5,
+            "h": 2
+        },
+        "107": {
+            "x": 21,
+            "y": 24,
+            "w": 6,
+            "h": 2
+        },
+        "108": {
+            "x": 0,
+            "y": 43,
+            "w": 21,
+            "h": 5
+        },
+        "109": {
+            "x": 0,
+            "y": 38,
+            "w": 21,
+            "h": 5
+        },
+        "110": {
+            "x": 0,
+            "y": 17,
+            "w": 16,
+            "h": 7
+        },
+        "114": {
+            "x": 0,
+            "y": 48,
+            "w": 32,
+            "h": 1
+        },
+        "115": {
+            "x": 28,
+            "y": 6,
+            "w": 4,
+            "h": 3
+        },
+        "116": {
+            "x": 24,
+            "y": 6,
+            "w": 4,
+            "h": 3
+        },
+        "117": {
+            "x": 20,
+            "y": 6,
+            "w": 4,
+            "h": 3
+        },
+        "118": {
+            "x": 15,
+            "y": 5,
+            "w": 5,
+            "h": 4
+        },
+        "119": {
+            "x": 8,
+            "y": 5,
+            "w": 7,
+            "h": 4
+        },
+        "125": {
+            "x": 25,
+            "y": 0,
+            "w": 6,
+            "h": 2
+        },
+        "126": {
+            "x": 20,
+            "y": 5,
+            "w": 12,
+            "h": 1
+        },
+        "127": {
+            "x": 0,
+            "y": 0,
+            "w": 7,
+            "h": 2
+        }
+    },
+    "importedWithCode": true,
+    "settings": {
+        "gridLayout": {
+            "mode": "responsive",
+            "columnsCount": 32
+        }
+    }
+}

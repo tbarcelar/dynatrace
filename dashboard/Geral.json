@@ -1,0 +1,1860 @@
+{
+    "version": 20,
+    "variables": [
+        {
+            "version": 2,
+            "key": "Cluster",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.kubernetes_cluster\n| fields entity.name\n\n",
+            "multiple": false
+        },
+        {
+            "version": 2,
+            "key": "Namespace",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch events\n| filter isNotNull(k8s.namespace.name) \n| summarize count(), by: k8s.namespace.name",
+            "multiple": false
+        },
+        {
+            "version": 2,
+            "key": "container",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.container_group_instance\n| fieldsAdd managementZones\n| filter matchesValue(managementZones, \"[demo\")\n| fields containerNames\n\n",
+            "multiple": false,
+            "defaultValue": "poddemo"
+        },
+        {
+            "version": 2,
+            "key": "database",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch spans\n| filter isNotNull(db.query.text)\n| filter not contains(db.namespace, \"<unavailable>\")\n| summarize count(), by: {db.namespace}\n| fields db.namespace\n",
+            "multiple": false
+        },
+        {
+            "version": 2,
+            "key": "Service",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.service\n| fields id, name = entity.name\n| filter isNotNull(name) and name != \"<default>\"\n| sort name asc",
+            "multiple": false,
+            "defaultValue": "servicedemo"
+        }
+    ],
+    "tiles": {
+        "0": {
+            "title": "Log Error para analise",
+            "type": "data",
+            "query": "fetch logs\n| filter k8s.namespace.name == $Namespace\n  and k8s.container.name == $container\n| filter matchesPhrase(content, \"error\")\n| sort timestamp desc\n\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "autoSelectVisualization": false,
+                "table": {
+                    "hiddenColumns": [
+                        [
+                            "loglevel"
+                        ],
+                        [
+                            "log.source"
+                        ],
+                        [
+                            "dt.entity.cloud_application"
+                        ],
+                        [
+                            "k8s.workload.name"
+                        ],
+                        [
+                            "k8s.cluster.uid"
+                        ],
+                        [
+                            "dt.entity.kubernetes_cluster"
+                        ],
+                        [
+                            "status"
+                        ],
+                        [
+                            "dt.openpipeline.pipelines"
+                        ],
+                        [
+                            "k8s.workload.kind"
+                        ],
+                        [
+                            "k8s.pod.name"
+                        ],
+                        [
+                            "dt.source_entity"
+                        ],
+                        [
+                            "dt.openpipeline.source"
+                        ],
+                        [
+                            "dt.entity.cloud_application_instance"
+                        ],
+                        [
+                            "k8s.namespace.name"
+                        ],
+                        [
+                            "k8s.container.name"
+                        ],
+                        [
+                            "k8s.node.name"
+                        ],
+                        [
+                            "k8s.deployment.name"
+                        ],
+                        [
+                            "k8s.cluster.name"
+                        ],
+                        [
+                            "dt.entity.cloud_application_namespace"
+                        ],
+                        [
+                            "k8s.pod.uid"
+                        ],
+                        [
+                            "log.iostream"
+                        ]
+                    ],
+                    "hideColumnsForLargeResults": false,
+                    "columnWidths": {
+                        "[\"content\"]": 1201
+                    },
+                    "columnTypeOverrides": [
+                        {
+                            "fields": [
+                                "content"
+                            ],
+                            "id": 1768400443795,
+                            "value": "log-content"
+                        }
+                    ]
+                }
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "9": {
+            "title": "CPU",
+            "type": "data",
+            "query": "timeseries { avg(dt.host.cpu.usage), value.A = avg(dt.host.cpu.usage, scalar: true) },\nby: { k8s.pod.name },\nfilter: { matchesValue(k8s.workload.name, $container) }",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "10": {
+            "title": "Memory",
+            "type": "data",
+            "query": "timeseries { avg(dt.host.memory.usage), value.A = avg(dt.host.memory.usage, scalar: true) }, \nby: { k8s.pod.name },\nfilter: { matchesValue(k8s.workload.name,$container) }\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "22": {
+            "title": "Top 5 request (media)",
+            "type": "data",
+            "query": "fetch spans\n| filter dt.kubernetes.workload.name == $container\n  AND dt.host_group.id == $Cluster\n| sort start_time desc\n| summarize avg_latency = avg(duration), by: {url.path}\n|limit 10 \n\n\n",
+            "visualization": "honeycomb",
+            "visualizationSettings": {
+                "honeycomb": {
+                    "colorMode": "custom-colors",
+                    "legend": {
+                        "position": "bottom",
+                        "hidden": true
+                    },
+                    "truncationMode": "middle",
+                    "labels": {
+                        "showLabels": true
+                    }
+                }
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "23": {
+            "title": "Status 4xx ",
+            "type": "data",
+            "query": "fetch spans\n| filter dt.kubernetes.workload.name ~ $container\nAND dt.host_group.id == $Cluster\nAND http.response.status_code >= 400\n| fields url.path, http.request.method, duration, http.response.status_code\n| summarize total = count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "segments": {
+                "tileSegments": [],
+                "tileSegmentsEnabled": false
+            }
+        },
+        "24": {
+            "title": "Status 5xx ",
+            "type": "data",
+            "query": "fetch spans\n| filter dt.kubernetes.workload.name ~ $container\nAND dt.host_group.id == \"hostdemo\"\nAND http.response.status_code >= 500\n| fields url.path, http.request.method, duration, http.response.status_code\n| summarize total = count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "segments": {
+                "tileSegments": [],
+                "tileSegmentsEnabled": false
+            }
+        },
+        "30": {
+            "title": "PODS Ativos",
+            "type": "data",
+            "query": "fetch dt.entity.cloud_application_instance\n| fields entity.name, cloudApplicationInstancePhase\n| filter cloudApplicationInstancePhase == \"RUNNING\"\n  and contains(entity.name, $container)\n| summarize activePods = count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "isIconVisible": true
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": "0",
+                        "title": "",
+                        "field": "activePods",
+                        "rules": [
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 2
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-fireplace-color-01-default, #ae132d)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 3,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-apdex-fair-default, #a9780f)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            }
+                        ],
+                        "isEnabled": true
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "31": {
+            "title": "Pod restart - falha ao subir",
+            "type": "data",
+            "query": "fetch events\n| filter k8s.namespace.name == $Namespace\n  and k8s.workload.name == $container\n  and dt.kubernetes.event.reason == \"Unhealthy\"\n  and contains(dt.kubernetes.event.message, \"connection refused\")\n| summarize count(), by: {k8s.pod.name}",
+            "visualization": "categoricalBarChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "categoricalBarChartSettings": {
+                        "categoryAxis": [
+                            "k8s.pod.name"
+                        ],
+                        "layout": "vertical"
+                    }
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "now()-24h",
+                    "to": "now()"
+                },
+                "tileTimeframeEnabled": false
+            }
+        },
+        "32": {
+            "title": "Pod restart - auto",
+            "type": "data",
+            "query": "fetch events\n| filter k8s.namespace.name == $Namespace\n  and k8s.workload.name == $container\n  and dt.kubernetes.event.reason == \"Killing\"\n  and contains(dt.kubernetes.event.message, \"will be restarted\")\n| summarize count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "count()"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "now()-24h",
+                    "to": "now()"
+                },
+                "tileTimeframeEnabled": false
+            }
+        },
+        "33": {
+            "title": "PODS Inativos",
+            "type": "data",
+            "query": "fetch dt.entity.cloud_application_instance\n| fields entity.name, cloudApplicationInstancePhase\n| filter cloudApplicationInstancePhase == \"FAILED\"\n  and contains(entity.name, $container)\n| summarize activePods = count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "isIconVisible": true
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "activePods",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 2
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 5
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "35": {
+            "type": "markdown",
+            "content": "[Frontend](https://xxxx.apps.dynatrace.com/ui/document/v0/#share=4xxxx)\n\n[Service](https://xxxx.apps.dynatrace.com/ui/document/v0/#share=xxxx)\n\n[Relatorio de Problemas](https://xxx.apps.dynatrace.com/ui/document/v0/#share=xxxx)"
+        },
+        "36": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Kubernetes  \")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "38": {
+            "title": "Log Error para analise",
+            "type": "data",
+            "query": "fetch logs\n| filter k8s.namespace.name == $Namespace\n  and k8s.container.name == $container\n| filter matchesPhrase(content, \"error\")\n| summarize count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "41": {
+            "title": "Total executado ",
+            "type": "data",
+            "query": "\n\nfetch spans\n| filter in(db.namespace, $database)\n| filter isNotNull(db.query.text)\n| fieldsAdd query = db.query.text\n| makeTimeseries total = count(), by: { query }, interval: 5m\n\n\n\n\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "position": "bottom"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "avg_cpu",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "nanosecond",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1761227528293
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "42": {
+            "title": "TOP 10 ",
+            "type": "data",
+            "query": "fetch spans\n| filter in(db.namespace, $database)\n| filter isNotNull(db.query.text)\n| fieldsAdd response_time = duration, cpu = span.timing.cpu, query = db.query.text\n| summarize total = count(), avg_response_time = avg(response_time), avg_cpu = avg(cpu), by: { query }\n| sort total desc\n| limit 10\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "colorThresholdTarget": "background",
+                    "hideColumnsForLargeResults": false,
+                    "sortBy": [
+                        {
+                            "columnId": "[\"db.query.text\"]",
+                            "direction": "descending"
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"query\"]",
+                        "[\"total\"]",
+                        "[\"avg_response_time\"]",
+                        "[\"avg_cpu\"]"
+                    ]
+                },
+                "autoSelectVisualization": true,
+                "unitsOverrides": [
+                    {
+                        "identifier": "avg_cpu",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "nanosecond",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1761227528293
+                    },
+                    {
+                        "identifier": "total",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 1,
+                        "suffix": "",
+                        "delimiter": true,
+                        "added": 1761231912920
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "43": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "44": {
+            "type": "markdown",
+            "content": "```Picos → banco sob pressão```"
+        },
+        "45": {
+            "type": "markdown",
+            "content": "```Erros altos → verifique conexões/pool```"
+        },
+        "46": {
+            "type": "markdown",
+            "content": "```Queries lentas → possível gargalo no banco```"
+        },
+        "48": {
+            "title": "Total de erro nas querys",
+            "type": "data",
+            "query": "fetch spans, scanLimitGBytes: 50, samplingRatio: 10\n| filter dt.entity.service == $Service\n| filter span.kind == \"client\" and isNotNull(db.system)\n| fieldsAdd db.query.text = coalesce(db.query.text, db.statement)\n| filter isNotNull(db.query.text)\n| filterOut in(db.operation.name, {\"PREPARE\", \"DESCRIBE\"}) \n  or startsWith(db.query.text, \"PREPARE\", caseSensitive: false) \n  or startsWith(db.query.text, \"DESCRIBE\", caseSensitive: false)\n| fieldsAdd samplingProbability = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd samplingMultiplicity = coalesce(1/samplingProbability, 1)\n| fieldsAdd failed = if(span.status_code == \"error\" or isNotNull(error.type) or iAny(span.events[][span_event.name]==\"exception\"), samplingMultiplicity, else: 0)\n| fieldsAdd failed = if(aggregation.exception_count > 0, failed * aggregation.exception_count, else: failed)\n| summarize totalErrors = sum(coalesce(failed, 0))\n| fieldsAdd totalErrors = coalesce(totalErrors, 0)",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "totalErrors",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768927801486
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "50": {
+            "title": "Total de querys",
+            "type": "data",
+            "query": "fetch spans\n| filter entityName(dt.entity.service)  == $Service\n\n| filter span.kind == \"client\" and isNotNull(db.system)\n| fieldsAdd db.query.text = coalesce(db.query.text, db.statement)\n| filter isNotNull(db.query.text)\n| filterOut in (db.operation.name, { \"PREPARE\", \"DESCRIBE\" })\n  or startsWith(db.query.text, {\"PREPARE\"}, caseSensitive: false)\n  or startsWith(db.query.text, {\"DESCRIBE\"}, caseSensitive: false)\n| fieldsAdd samplingProbability = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd samplingMultiplicity = coalesce(1/samplingProbability, 1)\n| fieldsAdd aggregationMultiplicity = coalesce(aggregation.count, 1)\n| fieldsAdd aggregationDuration = coalesce(aggregation.duration_sum, duration)\n| fieldsAdd entityName(dt.entity.service)\n| fieldsAdd failed = if(span.status_code == \"error\" or isNotNull(error.type) or iAny(span.events[][span_event.name]==\"exception\"), samplingMultiplicity, else: 0)\n| fieldsAdd failed = if(aggregation.exception_count > 0, failed * aggregation.exception_count, else: failed)\n\n| summarize {\n  queryCount = sum(samplingMultiplicity * aggregationMultiplicity),\n  errorCount = sum(failed),\n  cumulativeDuration = sum(samplingMultiplicity * aggregationDuration)\n}, by: { dt.entity.service.name, dt.entity.service, db.system, db.query.text, db.namespace }\n\n\n| fieldsAdd lifetime = entityAttr(dt.entity.service, \"lifetime\", type:\"dt.entity.service\")\n| fieldsAdd customIconPath = entityAttr(dt.entity.service, \"customIconPath\", type:\"dt.entity.service\")\n| fieldsAdd icon = entityAttr(dt.entity.service, \"icon\", type:\"dt.entity.service\")\n| fieldsAdd entity = record(entityId = dt.entity.service,\n        displayName = entityName(dt.entity.service),\n        lifetimeEndMillis= unixMillisFromTimestamp(lifetime[end]),\n        customIconPath = customIconPath,\n        icon = icon[primaryIconType])\n\n| fields\n  entity,\n  queryCount = toLong(queryCount),\n  errorCount = toLong(errorCount),\n  dt.entity.service.name,\n  dt.entity.service,\n  db.system,\n  db.query.text,\n  db.namespace,\n  id = toUid(hashMd5(concat(dt.entity.service.name, dt.entity.service, db.system, db.query.text, db.namespace))),\n  queryDuration = cumulativeDuration / queryCount,\n  cumulativeDuration\n\n| sort isNull(cumulativeDuration) asc, cumulativeDuration desc\n\n| fields id, db.query.text, errorCount\n|summarize count(), by:{errorCount}",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "count()"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "totalErrors",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768927801486
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "51": {
+            "title": "DB Queries - Duração Acima de 17ms",
+            "type": "data",
+            "query": "fetch spans, scanLimitGBytes: 50, samplingRatio: 10\n| filter contains(entityName(dt.entity.service), $Service)\n| filter span.kind == \"client\" and isNotNull(db.system)\n| fieldsAdd db.query.text = coalesce(db.query.text, db.statement)\n| filter isNotNull(db.query.text)\n| filterOut in(db.operation.name, {\"PREPARE\", \"DESCRIBE\"}) \n  or startsWith(db.query.text, \"PREPARE\", caseSensitive: false) \n  or startsWith(db.query.text, \"DESCRIBE\", caseSensitive: false)\n| fieldsAdd samplingProbability = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd samplingMultiplicity = coalesce(1/samplingProbability, 1)\n| fieldsAdd aggregationMultiplicity = coalesce(aggregation.count, 1)\n| fieldsAdd aggregationDuration = coalesce(aggregation.duration_sum, duration)\n| fieldsAdd serviceName = entityName(dt.entity.service)\n| fieldsAdd failed = if(span.status_code == \"error\" or isNotNull(error.type) or iAny(span.events[][span_event.name]==\"exception\"), samplingMultiplicity, else: 0)\n| fieldsAdd failed = if(aggregation.exception_count > 0, failed * aggregation.exception_count, else: failed)\n| summarize {\n  queryCount = sum(samplingMultiplicity * aggregationMultiplicity),\n  errorCount = sum(failed),\n  cumulativeDuration = sum(samplingMultiplicity * aggregationDuration)\n}, by: { serviceName, dt.entity.service, db.system, db.query.text, db.namespace }\n| fields db.query.text, errorCount, queryCount, queryDuration = cumulativeDuration / queryCount, cumulativeDuration\n| filter queryDuration > 17000000ns\n| sort queryDuration desc\n| limit 5",
+            "visualization": "table",
+            "visualizationSettings": {
+                "autoSelectVisualization": true,
+                "table": {
+                    "hideColumnsForLargeResults": false,
+                    "hiddenColumns": [
+                        [
+                            "db.namespace"
+                        ]
+                    ],
+                    "columnWidths": {
+                        "[\"db.query.text\"]": 414
+                    },
+                    "sortBy": [
+                        {
+                            "columnId": "[\"queryDuration\"]",
+                            "direction": "ascending"
+                        }
+                    ]
+                },
+                "unitsOverrides": [
+                    {
+                        "identifier": "errorCount",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1768912013322
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "52": {
+            "title": "Throughput do banco login",
+            "type": "data",
+            "query": "// Metric microchart simple lookup query\n      timeseries failureCount_timeseries = sum(dt.service.request.failure_count, rate: 1m), by:{dt.entity.service} , bins: 60,filter: entityName(dt.entity.service) == $Service , nonempty: true  \n| fieldsAdd metricName = \"Failed requests\"\n| append[// Metric microchart calculation lookup query\n      timeseries {\n        operand1 = sum(dt.service.request.count, rate: 1m),\n        operand2 = sum(dt.service.request.failure_count, rate: 1m)\n      }, by: { dt.entity.service }, bins: 60, filter: entityName(dt.entity.service) == $Service , nonempty: true \n      \n| fieldsAdd successfulRequests_timeseries = operand1[] - operand2[] \n      \n| fieldsRemove operand1, operand2 \n| fieldsAdd metricName = \"Successful requests\"]",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true,
+                "chartSettings": {
+                    "fieldMapping": {
+                        "leftAxisValues": [
+                            "successfulRequests_timeseries",
+                            "failureCount_timeseries"
+                        ]
+                    },
+                    "legend": {
+                        "hidden": true
+                    }
+                },
+                "dataMapping": {
+                    "displayedFields": [
+                        "dt.entity.service"
+                    ]
+                }
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "55": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Kafka\")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    },
+                    "prefixIcon": "ApplicationObservabilitySignetIcon"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "56": {
+            "title": "Broker - Taxa de Bytes Saída",
+            "type": "data",
+            "query": "timeseries interval:10m, avg(`kafka.server.BrokerTopicMetrics.BytesOutPerSec.OneMinuteRate`), by:{`dt.entity.kafka:broker`}",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "57": {
+            "title": "Broker - Requisições de Produção com Falha",
+            "type": "data",
+            "query": "timeseries interval:10m, avg(`kafka.server.BrokerTopicMetrics.FailedProduceRequestsPerSec.OneMinuteRate`), by:{`dt.entity.kafka:broker`}\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "58": {
+            "title": "Broker - Taxa de Mensagens Entrantes",
+            "type": "data",
+            "query": "timeseries interval:10m, avg(`kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate`), by:{`dt.entity.kafka:broker`, topic}\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "59": {
+            "title": "Kafka Broker - Messages in rate",
+            "type": "data",
+            "query": "timeseries { avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate),\ntraffic = avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate, scalar: true) }, \nby: { `dt.entity.kafka:broker`, topic }\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "autoSelectVisualization": false,
+                "table": {
+                    "hiddenColumns": [
+                        [
+                            "timeframe",
+                            "start"
+                        ],
+                        [
+                            "timeframe",
+                            "end"
+                        ],
+                        [
+                            "interval"
+                        ],
+                        [
+                            "avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate)"
+                        ]
+                    ],
+                    "columnTypeOverrides": [
+                        {
+                            "fields": [
+                                "avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate)"
+                            ],
+                            "value": "sparkline",
+                            "id": 1763732808670
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"timeframe\",\"start\"]",
+                        "[\"timeframe\",\"end\"]",
+                        "[\"interval\"]",
+                        "[\"dt.entity.kafka:broker\"]",
+                        "[\"topic\"]",
+                        "[\"avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate)\"]",
+                        "[\"traffic\"]"
+                    ],
+                    "hideColumnsForLargeResults": false
+                }
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "60": {
+            "title": "Kafka Broker - Produce request rate",
+            "type": "data",
+            "query": "timeseries { avg(kafka.server.BrokerTopicMetrics.TotalProduceRequestsPerSec.OneMinuteRate),\ntraffic = avg(kafka.server.BrokerTopicMetrics.TotalProduceRequestsPerSec.OneMinuteRate, scalar: true) }, \nby: { `dt.entity.kafka:broker`, topic }\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "hiddenColumns": [
+                        [
+                            "avg(kafka.server.BrokerTopicMetrics.MessagesInPerSec.OneMinuteRate)"
+                        ],
+                        [
+                            "interval"
+                        ],
+                        [
+                            "timeframe",
+                            "start"
+                        ],
+                        [
+                            "timeframe",
+                            "end"
+                        ],
+                        [
+                            "avg(kafka.server.BrokerTopicMetrics.TotalProduceRequestsPerSec.OneMinuteRate)"
+                        ]
+                    ],
+                    "columnTypeOverrides": [
+                        {
+                            "fields": [
+                                "avg(kafka.server.BrokerTopicMetrics.TotalProduceRequestsPerSec.OneMinuteRate)"
+                            ],
+                            "value": "sparkline",
+                            "id": 1763126944441
+                        }
+                    ],
+                    "columnOrder": [
+                        "[\"interval\"]",
+                        "[\"dt.entity.kafka:broker\"]",
+                        "[\"topic\"]",
+                        "[\"traffic\"]",
+                        "[\"timeframe\",\"start\"]",
+                        "[\"timeframe\",\"end\"]",
+                        "[\"avg(kafka.server.BrokerTopicMetrics.TotalProduceRequestsPerSec.OneMinuteRate)\"]"
+                    ],
+                    "hideColumnsForLargeResults": false
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "61": {
+            "title": " consumo lag",
+            "type": "data",
+            "query": "timeseries { avg(`kafka.consumer.consumer-metrics.records-lag`), value.A = avg(`kafka.consumer.consumer-metrics.records-lag`, scalar: true) },\nby: { host.name }",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "62": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "63": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "64": {
+            "type": "markdown",
+            "content": "# Infraestrutura do kafka"
+        },
+        "65": {
+            "title": "Tempo disponivel ip-xxxxx",
+            "type": "data",
+            "query": "timeseries availability = sum(dt.host.availability, scalar: true, filter: { dt.entity.host == \"HOST-xxxx\" }), by: { availability.state, dt.metrics.source, dt.host_group.id, host.name, dt.entity.host }\n| summarize { availability = sum(availability) }, by: { availability.state, timeframe, interval }\n| sort availability desc\n| join [ timeseries availability = sum(dt.host.availability, scalar: true, filter: { dt.entity.host == \"HOST-xxxx\" }), by: { availability.state, dt.metrics.source, dt.host_group.id, host.name, dt.entity.host }\n       | summarize { availability = sum(availability) }, by: { timeframe, interval } ], on: { interval }, fields: { operand = availability }\n| fieldsAdd expression = availability / operand\n| fieldsRemove operand, availability\n| fieldsAdd expression = expression * 100",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "expression",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 11
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 10
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "expression",
+                        "unitCategory": "percentage",
+                        "baseUnit": "percent",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1763571610188
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "66": {
+            "title": "Memory usage %  ip-xxxx",
+            "type": "data",
+            "query": "timeseries { avg(dt.host.memory.usage), value.A = avg(dt.host.memory.usage, scalar: true) },\nfilter: { matchesValue(entityAttr(dt.entity.host, \"entity.name\"), \"ip-xxx.sa-east-1.compute.internal\") }\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "sparklineSettings": {
+                        "isVisible": false
+                    },
+                    "trend": {
+                        "isVisible": false
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "value.A",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 75
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 95
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "67": {
+            "title": "Problem  ip-xxx",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n| filter matchesValue(host.name, \"ip-xxx.sa-east-1.compute.internal\")\n| summarize count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "count()",
+                    "sparklineSettings": {
+                        "isVisible": false
+                    },
+                    "trend": {
+                        "isVisible": false
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "count()",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 3
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "68": {
+            "title": "Events kafka ip-xxxx",
+            "type": "data",
+            "query": "fetch events\n| filter dt.entity.host.name == \"ip-xxx.sa-east-1.compute.internal\" and  contains(event.description, \"kafka\")\n| fields  event.description\n|summarize count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "count()",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 5
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "69": {
+            "title": "Memory containers in  ip-xxxx",
+            "type": "data",
+            "query": "timeseries resident_set_bytes = avg(dt.containers.memory.resident_set_bytes, filter: { in(dt.entity.container_group_instance, classicEntitySelector(\"type(CONTAINER_GROUP_INSTANCE) AND fromRelationships.isCgiOfHost(type(HOST),entityId(HOST-xxxx))\")) })",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "hidden": true
+                    }
+                },
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "70": {
+            "title": "Memory usage %  ip-xxxxx,
+            "type": "data",
+            "query": "timeseries { avg(dt.host.memory.usage), value.A = avg(dt.host.memory.usage, scalar: true) },\nfilter: { matchesValue(entityAttr(dt.entity.host, \"entity.name\"), \"ip-xxxxx.sa-east-1.compute.internal\") }",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "hidden": true
+                    },
+                    "pointsDisplay": "never"
+                },
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "71": {
+            "title": "Disk ip-xxxx",
+            "type": "data",
+            "query": "timeseries { avg(dt.host.disk.free), value.A = avg(dt.host.disk.free, scalar: true) }, by: { dt.entity.disk }, filter: { matchesValue(entityAttr(dt.entity.host, \"entity.name\"), \"ip-xxxx.sa-east-1.compute.internal\") }\n| fieldsAdd dt.entity.disk.name = entityName(dt.entity.disk)",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "truncationMode": "middle",
+                    "legend": {
+                        "position": "bottom"
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": []
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "72": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Banco de dados\")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    },
+                    "prefixIcon": "StorageIcon"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "74": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "76": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "78": {
+            "type": "markdown",
+            "content": "--- \n "
+        }
+    },
+    "layouts": {
+        "0": {
+            "x": 0,
+            "y": 13,
+            "w": 6,
+            "h": 4
+        },
+        "9": {
+            "x": 0,
+            "y": 8,
+            "w": 4,
+            "h": 5
+        },
+        "10": {
+            "x": 4,
+            "y": 8,
+            "w": 5,
+            "h": 5
+        },
+        "22": {
+            "x": 6,
+            "y": 4,
+            "w": 3,
+            "h": 4
+        },
+        "23": {
+            "x": 4,
+            "y": 4,
+            "w": 2,
+            "h": 2
+        },
+        "24": {
+            "x": 4,
+            "y": 6,
+            "w": 2,
+            "h": 2
+        },
+        "30": {
+            "x": 0,
+            "y": 4,
+            "w": 2,
+            "h": 2
+        },
+        "31": {
+            "x": 2,
+            "y": 6,
+            "w": 2,
+            "h": 2
+        },
+        "32": {
+            "x": 0,
+            "y": 6,
+            "w": 2,
+            "h": 2
+        },
+        "33": {
+            "x": 2,
+            "y": 4,
+            "w": 2,
+            "h": 2
+        },
+        "35": {
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2
+        },
+        "36": {
+            "x": 0,
+            "y": 2,
+            "w": 9,
+            "h": 2
+        },
+        "38": {
+            "x": 6,
+            "y": 13,
+            "w": 3,
+            "h": 4
+        },
+        "41": {
+            "x": 9,
+            "y": 10,
+            "w": 5,
+            "h": 6
+        },
+        "42": {
+            "x": 17,
+            "y": 4,
+            "w": 7,
+            "h": 6
+        },
+        "43": {
+            "x": 0,
+            "y": 17,
+            "w": 24,
+            "h": 1
+        },
+        "44": {
+            "x": 9,
+            "y": 4,
+            "w": 6,
+            "h": 1
+        },
+        "45": {
+            "x": 15,
+            "y": 4,
+            "w": 2,
+            "h": 2
+        },
+        "46": {
+            "x": 14,
+            "y": 10,
+            "w": 5,
+            "h": 1
+        },
+        "48": {
+            "x": 15,
+            "y": 8,
+            "w": 2,
+            "h": 2
+        },
+        "50": {
+            "x": 15,
+            "y": 6,
+            "w": 2,
+            "h": 2
+        },
+        "51": {
+            "x": 14,
+            "y": 11,
+            "w": 10,
+            "h": 5
+        },
+        "52": {
+            "x": 9,
+            "y": 5,
+            "w": 6,
+            "h": 5
+        },
+        "55": {
+            "x": 7,
+            "y": 18,
+            "w": 10,
+            "h": 2
+        },
+        "56": {
+            "x": 16,
+            "y": 20,
+            "w": 8,
+            "h": 6
+        },
+        "57": {
+            "x": 8,
+            "y": 20,
+            "w": 8,
+            "h": 6
+        },
+        "58": {
+            "x": 0,
+            "y": 20,
+            "w": 8,
+            "h": 6
+        },
+        "59": {
+            "x": 0,
+            "y": 26,
+            "w": 8,
+            "h": 5
+        },
+        "60": {
+            "x": 8,
+            "y": 26,
+            "w": 8,
+            "h": 5
+        },
+        "61": {
+            "x": 16,
+            "y": 26,
+            "w": 8,
+            "h": 5
+        },
+        "62": {
+            "x": 17,
+            "y": 31,
+            "w": 7,
+            "h": 1
+        },
+        "63": {
+            "x": 0,
+            "y": 31,
+            "w": 9,
+            "h": 1
+        },
+        "64": {
+            "x": 10,
+            "y": 31,
+            "w": 7,
+            "h": 1
+        },
+        "65": {
+            "x": 0,
+            "y": 32,
+            "w": 6,
+            "h": 3
+        },
+        "66": {
+            "x": 6,
+            "y": 32,
+            "w": 6,
+            "h": 3
+        },
+        "67": {
+            "x": 12,
+            "y": 32,
+            "w": 6,
+            "h": 3
+        },
+        "68": {
+            "x": 18,
+            "y": 32,
+            "w": 6,
+            "h": 3
+        },
+        "69": {
+            "x": 16,
+            "y": 35,
+            "w": 8,
+            "h": 5
+        },
+        "70": {
+            "x": 8,
+            "y": 35,
+            "w": 8,
+            "h": 5
+        },
+        "71": {
+            "x": 0,
+            "y": 35,
+            "w": 8,
+            "h": 5
+        },
+        "72": {
+            "x": 9,
+            "y": 2,
+            "w": 15,
+            "h": 2
+        },
+        "74": {
+            "x": 0,
+            "y": 40,
+            "w": 12,
+            "h": 1
+        },
+        "76": {
+            "x": 9,
+            "y": 16,
+            "w": 15,
+            "h": 1
+        },
+        "78": {
+            "x": 3,
+            "y": 0,
+            "w": 21,
+            "h": 2
+        }
+    },
+    "importedWithCode": false,
+    "settings": {
+        "defaultTimeframe": {
+            "value": {
+                "from": "now()-2h",
+                "to": "now()"
+            },
+            "enabled": false
+        }
+    }
+}

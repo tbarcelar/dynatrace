@@ -1,0 +1,1071 @@
+{
+    "version": 20,
+    "variables": [
+        {
+            "version": 2,
+            "key": "Perfil",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.davis.problems\n| filter isNotNull(labels.alerting_profile) \n| fields  labels.alerting_profile \n",
+            "multiple": true,
+            "defaultValue": [
+                "xxxx"
+            ]
+        },
+        {
+            "version": 2,
+            "key": "Problema1",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.davis.problems\n| filter isNotNull(display_id) \n| fields display_id\n| sort display_id asc\n\n\n",
+            "multiple": true
+        },
+        {
+            "key": "inicio",
+            "visible": true,
+            "type": "query",
+            "version": 2,
+            "editable": true,
+            "input": "fetch dt.davis.problems,  from:\"2026-01-01T00:00:00\", to:\"2026-01-25T23:59:59\"\n| filter not(isNull(event.start))\n| fields formatTimestamp(event.start, format:\"yyyy-MM-dd \")\n| sort `formatTimestamp(event.start, format:\"yyyy-MM-dd \")` desc",
+            "multiple": false
+        },
+        {
+            "key": "fim",
+            "visible": true,
+            "type": "query",
+            "version": 2,
+            "editable": true,
+            "input": "fetch dt.davis.problems,  from:\"2026-01-01T00:00:00\", to:\"2026-01-25T23:59:59\"\n| filter not(isNull(event.end))\n| fields formatTimestamp(event.end, format:\"yyyy-MM-dd \")\n\n| sort `formatTimestamp(event.end, format:\"yyyy-MM-dd \")` desc\n\n\n",
+            "multiple": false
+        },
+        {
+            "version": 2,
+            "key": "Problema2",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.davis.problems,  from:$inicio, to:$fim\n| filter contains(toString(labels.alerting_profile), $Perfil)\n| fields display_id\n| sort display_id asc",
+            "multiple": true
+        }
+    ],
+    "tiles": {
+        "3": {
+            "title": "ALL Problems",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "4": {
+            "title": "Slowdown",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n\n| filter event.category == \"SLOWDOWN\"\n\n\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "5": {
+            "title": "Buscar display",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n| filter in(display_id, array($Problema1))\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| fieldsAdd problema = display_id\n| fieldsAdd periodo = timestamp\n| fieldsAdd titulo_problema = event.name\n| fieldsAdd tipo_problema = event.category\n| fieldsAdd tag = entity_tags\n| fieldsAdd MTTR = resolved_problem_duration\n| fieldsAdd status = event.status\n\n| fields problema, periodo, titulo_problema, tipo_problema, tag, MTTR, status\n| sort problema asc\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "sortBy": [
+                        {
+                            "columnId": "[\"resolved_problem_duration\"]",
+                            "direction": "descending"
+                        }
+                    ],
+                    "columnWidths": {
+                        "[\"timestamp\"]": 148,
+                        "[\"event.name\"]": 230.98,
+                        "[\"display_id\"]": 114.99,
+                        "[\"SeverityLevel\"]": 163,
+                        "[\"MTTR\"]": 94.98,
+                        "[\"Data\"]": 180,
+                        "[\"event.end\"]": 253,
+                        "[\"event.start\"]": 233,
+                        "[\"event.status\"]": 158,
+                        "[\"entity_tags\"]": 293,
+                        "[\"status\"]": 85,
+                        "[\"tag\"]": 522,
+                        "[\"fim_problema\"]": 150,
+                        "[\"inicio_problema\"]": 141,
+                        "[\"tipo_problema\"]": 136
+                    }
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "MTTR",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "minute",
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1757450062876
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "6": {
+            "title": "Media MTTR",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n| filter matchesValue(labels.alerting_profile, $Perfil)\n\n| summarize MTTE_Minutes = sum(resolved_problem_duration) / count()\n\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "MTTR_Total_Minutes",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "minute",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1757451106780
+                    }
+                ],
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "MTTR_Total_Minutes",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 5
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 300000000000
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 1800000000000
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "now()-7d",
+                    "to": "now()"
+                },
+                "tileTimeframeEnabled": false
+            }
+        },
+        "8": {
+            "title": "ERROR",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n\n| filter event.category == \"ERROR\"\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "10": {
+            "title": "AVAILABILITY",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n\n| filter event.category ==  \"AVAILABILITY\"\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "31": {
+            "type": "markdown",
+            "content": "![teste](https://i.imgur.com/3y8Nmw8.jpeg)"
+        },
+        "32": {
+            "title": "Buscar Problema",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n| filter in(display_id, array($Problema2))\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| fieldsAdd problema = display_id\n| fieldsAdd periodo = timestamp\n| fieldsAdd titulo_problema = event.name\n| fieldsAdd tipo_problema = event.category\n| fieldsAdd tag = entity_tags\n| fieldsAdd MTTR = resolved_problem_duration\n| fieldsAdd status = event.status\n\n| fields problema, periodo, titulo_problema, tipo_problema, tag, MTTR, status\n| sort problema asc\n",
+            "visualization": "table",
+            "visualizationSettings": {
+                "table": {
+                    "sortBy": [
+                        {
+                            "columnId": "[\"resolved_problem_duration\"]",
+                            "direction": "descending"
+                        }
+                    ],
+                    "columnWidths": {
+                        "[\"timestamp\"]": 148,
+                        "[\"event.name\"]": 230.98,
+                        "[\"display_id\"]": 114.99,
+                        "[\"SeverityLevel\"]": 163,
+                        "[\"MTTR\"]": 130.97,
+                        "[\"Data\"]": 180,
+                        "[\"event.end\"]": 253,
+                        "[\"event.start\"]": 233,
+                        "[\"event.status\"]": 158,
+                        "[\"entity_tags\"]": 225,
+                        "[\"tag\"]": 284.61,
+                        "[\"status\"]": 89.28
+                    }
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "MTTR",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "minute",
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1757450062876
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "2025-09-21T03:00Z",
+                    "to": "2025-09-28T02:59Z"
+                },
+                "tileTimeframeEnabled": true
+            }
+        },
+        "34": {
+            "title": "Problems AVAILABILITY",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n\n| filter event.category ==  \"AVAILABILITY\"\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "2025-09-21T03:00Z",
+                    "to": "2025-09-28T02:59Z"
+                },
+                "tileTimeframeEnabled": true
+            }
+        },
+        "35": {
+            "title": "Problems  Performance",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n\n| filter event.category == \"SLOWDOWN\"\n\n\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "2025-09-21T03:00Z",
+                    "to": "2025-09-28T02:59Z"
+                },
+                "tileTimeframeEnabled": true
+            }
+        },
+        "36": {
+            "title": "Problems ERROR",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n\n| filter event.category == \"ERROR\"\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "2025-09-21T03:00Z",
+                    "to": "2025-09-28T02:59Z"
+                },
+                "tileTimeframeEnabled": true
+            }
+        },
+        "37": {
+            "title": "ALL Problems",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n| filter matchesValue(labels.alerting_profile, $Perfil)\n\n| summarize count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            },
+            "timeframe": {
+                "tileTimeframe": {
+                    "from": "2025-09-21T03:00Z",
+                    "to": "2025-09-28T02:59Z"
+                },
+                "tileTimeframeEnabled": true
+            }
+        },
+        "38": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "41": {
+            "title": "Soma MTTR",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n\n| filter in(display_id, array($Problema2))\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize Duration_Minutes = sum(resolved_problem_duration) ",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_duration_minutes",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "nanosecond",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759775827248
+                    },
+                    {
+                        "identifier": "soma_duracao",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "minute",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759780468387
+                    },
+                    {
+                        "identifier": "Duration_Minutes",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759780832877
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "42": {
+            "title": "Media MTTR",
+            "type": "data",
+            "query": "fetch dt.davis.problems, from:$inicio, to:$fim\n| filter in(display_id, array($Problema2))\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize MTTE_Minutes = sum(resolved_problem_duration) / count()",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "44": {
+            "type": "markdown",
+            "content": "### 🧩📊 **Tabela pode ser modificada pelos filtros acima**\n\n"
+        },
+        "45": {
+            "type": "markdown",
+            "content": "### 📅 ✨ **Selecionar período no Global**\n"
+        },
+        "46": {
+            "title": "Soma MTTR",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n\n| filter in(display_id, array($Problema1))\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize Duration_Minutes = sum(resolved_problem_duration) ",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "total_duration_minutes",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "nanosecond",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759775827248
+                    },
+                    {
+                        "identifier": "soma_duracao",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": "minute",
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759780468387
+                    },
+                    {
+                        "identifier": "Duration_Minutes",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1759780832877
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "47": {
+            "title": "Custom",
+            "type": "data",
+            "query": "fetch dt.davis.problems\n| filter matchesValue(event.category, \"CUSTOM_ALERT\")\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "48": {
+            "type": "markdown",
+            "content": "### 📊 **MTTR de Todos os Problemas**  \n"
+        },
+        "49": {
+            "type": "markdown",
+            "content": "> 📌 *Clique no filtro perfil se quiser mudar o padrão que é demo   !*"
+        },
+        "50": {
+            "type": "markdown",
+            "content": "Filtro **`problema2`**(Problema específico)\n"
+        },
+        "51": {
+            "type": "markdown",
+            "content": "\n- 🧑‍💻 **Perfil:** *demo*  \n  Para visualizar outro perfil, altere o filtro **`perfil`** no topo do dashboard.\n\n- 🚨 **Problemas:** *Todos os problemas*   \n  Para focar em um problema específico, selecione o filtro **`problema1`**.\n"
+        },
+        "52": {
+            "type": "markdown",
+            "content": "### ⏳📌 **Período por Filtro (Início e Fim)**\n\n\n"
+        },
+        "54": {
+            "type": "markdown",
+            "content": "\n> 🚫 O período **Global** não é considerado  \n> 🚨 Filtro : **problema2**"
+        },
+        "55": {
+            "type": "markdown",
+            "content": "### 📊 **MTTR de Todos os Problemas**  \n"
+        },
+        "56": {
+            "title": "Custom",
+            "type": "data",
+            "query": "fetch dt.davis.problems,  from:$inicio, to:$fim\n| filter matchesValue(event.category, \"CUSTOM_ALERT\")\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize total_selected = count()\n\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "57": {
+            "type": "markdown",
+            "content": "Filtro **`problema2`**(Problema específico)\n"
+        },
+        "59": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "75": {
+            "title": "Gestor xxxx",
+            "type": "data",
+            "query": "fetch dt.davis.problems, from:$inicio, to:$fim\n| expand entity_tags \n| filter entity_tags == \"Grupo de xxxx:squad_acessos(xxx)\"\n| expand labels.alerting_profile\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize Total = count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "Total",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 5
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 10
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "76": {
+            "title": "Gestor xxx",
+            "type": "data",
+            "query": "fetch dt.davis.problems, from:$inicio, to:$fim\n| expand entity_tags \n| filter entity_tags == \"Grupo de xxx:squad_framework(xxx)\"\n| expand labels.alerting_profile\n| filter matchesValue(labels.alerting_profile, $Perfil)\n| summarize Total = count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "Total",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 0
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 5
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 10
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "78": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "79": {
+            "type": "markdown",
+            "content": "[Frontend](https://xxx.apps.dynatrace.com/ui/document/v0/#share=xxx0)\n\n[Service](https://xxx.apps.dynatrace.com/ui/document/v0/#share=xx4)\n\n[Geral](https://xx.apps.dynatrace.com/ui/document/v0/#share=xxx2)\n"
+        },
+        "80": {
+            "type": "markdown",
+            "content": "--- \n "
+        }
+    },
+    "layouts": {
+        "3": {
+            "x": 0,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "4": {
+            "x": 6,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "5": {
+            "x": 0,
+            "y": 9,
+            "w": 15,
+            "h": 4
+        },
+        "6": {
+            "x": 17,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "8": {
+            "x": 3,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "10": {
+            "x": 9,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "31": {
+            "x": 2,
+            "y": 0,
+            "w": 22,
+            "h": 4
+        },
+        "32": {
+            "x": 0,
+            "y": 18,
+            "w": 15,
+            "h": 5
+        },
+        "34": {
+            "x": 9,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "35": {
+            "x": 6,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "36": {
+            "x": 3,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "37": {
+            "x": 0,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "38": {
+            "x": 0,
+            "y": 13,
+            "w": 24,
+            "h": 1
+        },
+        "41": {
+            "x": 21,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "42": {
+            "x": 17,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "44": {
+            "x": 3,
+            "y": 8,
+            "w": 15,
+            "h": 1
+        },
+        "45": {
+            "x": 0,
+            "y": 4,
+            "w": 7,
+            "h": 2
+        },
+        "46": {
+            "x": 21,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "47": {
+            "x": 12,
+            "y": 6,
+            "w": 3,
+            "h": 2
+        },
+        "48": {
+            "x": 17,
+            "y": 4,
+            "w": 7,
+            "h": 1
+        },
+        "49": {
+            "x": 7,
+            "y": 4,
+            "w": 8,
+            "h": 2
+        },
+        "50": {
+            "x": 17,
+            "y": 5,
+            "w": 7,
+            "h": 1
+        },
+        "51": {
+            "x": 17,
+            "y": 9,
+            "w": 7,
+            "h": 4
+        },
+        "52": {
+            "x": 0,
+            "y": 14,
+            "w": 10,
+            "h": 2
+        },
+        "54": {
+            "x": 10,
+            "y": 14,
+            "w": 5,
+            "h": 2
+        },
+        "55": {
+            "x": 17,
+            "y": 14,
+            "w": 7,
+            "h": 1
+        },
+        "56": {
+            "x": 12,
+            "y": 16,
+            "w": 3,
+            "h": 2
+        },
+        "57": {
+            "x": 17,
+            "y": 15,
+            "w": 7,
+            "h": 1
+        },
+        "59": {
+            "x": 0,
+            "y": 23,
+            "w": 24,
+            "h": 1
+        },
+        "75": {
+            "x": 17,
+            "y": 19,
+            "w": 3,
+            "h": 2
+        },
+        "76": {
+            "x": 21,
+            "y": 19,
+            "w": 3,
+            "h": 2
+        },
+        "78": {
+            "x": 17,
+            "y": 18,
+            "w": 7,
+            "h": 1
+        },
+        "79": {
+            "x": 0,
+            "y": 1,
+            "w": 2,
+            "h": 3
+        },
+        "80": {
+            "x": 0,
+            "y": 0,
+            "w": 2,
+            "h": 1
+        }
+    },
+    "importedWithCode": false,
+    "settings": {}
+}

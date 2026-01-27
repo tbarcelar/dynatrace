@@ -1,0 +1,1289 @@
+{
+    "version": 20,
+    "variables": [
+        {
+            "version": 2,
+            "key": "MZ",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.application\n| expand managementZones\n| summarize count(), by: {managementZones}\n| fields managementZones\n",
+            "multiple": false,
+            "defaultValue": "[Produtos-xxxx] - Todos"
+        },
+        {
+            "version": 2,
+            "key": "service_name",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch dt.entity.service\n| expand managementZones\n| filter managementZones == $MZ\n| filter contains(entity.name, \"xxx\")\n| sort entity.name asc\n| fields value = id, display = entity.name\n\n\n\n\n",
+            "multiple": true,
+            "defaultValue": [
+                "demoxxxx"
+            ]
+        },
+        {
+            "version": 2,
+            "key": "span_name",
+            "type": "query",
+            "visible": true,
+            "editable": true,
+            "input": "fetch spans, samplingRatio: 1, scanLimitGBytes: 500\n\n| filter in(\n    dt.entity.service,\n    classicEntitySelector(\n      concat(\n        \"type(service), entityname.equals(\\\"\",\n        $service_name,\n        \"\\\")\"\n      )\n    )\n  )\n\n| fieldsAdd span.source =\n    if(\n      isNotNull(dt.agent.module.id)\n      or matchesValue(telemetry.exporter.name, \"odin\")\n      or matchesValue(telemetry.sdk.name, \"oneagent\")\n      or matchesValue(dt.openpipeline.source, \"oneagent\"),\n      \"OneAgent\",\n      else: \"OpenTelemetry\"\n    )\n\n| summarize dummy = count(), by: value = span.name\n| sort value asc\n\n\n    \n",
+            "multiple": false,
+            "defaultValue": "xxxx"
+        }
+    ],
+    "tiles": {
+        "1": {
+            "type": "markdown",
+            "content": "### 🚫 Errors"
+        },
+        "3": {
+            "type": "markdown",
+            "content": "#### ℹ️  Health Check"
+        },
+        "4": {
+            "title": "Total de erros 5xx ",
+            "type": "data",
+            "query": "fetch spans\n| filter http.response.status_code >= 500 AND http.response.status_code <= 599\n| filter matchesValue(entityAttr(dt.entity.service, \"managementZones\"), $MZ)\n//| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)\n| summarize total_errors = count()\n| fields total_errors\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "total_errors",
+                    "sparklineSettings": {
+                        "isVisible": false
+                    },
+                    "trend": {
+                        "isVisible": false
+                    }
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "value.A",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1760637871718
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "5": {
+            "title": "4xx OR 5xx",
+            "type": "data",
+            "query": "fetch spans\n| filter (\n   (http.response.status_code >= 400 AND http.response.status_code <= 499)\n   OR (http.response.status_code >= 500 AND http.response.status_code <= 599)\n)\n| filter matchesValue(entityAttr(dt.entity.service, \"managementZones\"), $MZ)\n//| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)\n",
+            "visualization": "honeycomb",
+            "visualizationSettings": {
+                "autoSelectVisualization": false,
+                "honeycomb": {
+                    "colorMode": "custom-colors",
+                    "customColors": [
+                        {
+                            "id": 10031748.799999952,
+                            "value": 400,
+                            "color": {
+                                "Default": "var(--dt-colors-charts-apdex-fair-default, #a9780f)"
+                            },
+                            "comparator": "≥"
+                        },
+                        {
+                            "id": 10037524.299999952,
+                            "value": 500,
+                            "color": "#b3007d",
+                            "comparator": "≥"
+                        }
+                    ],
+                    "dataMappings": {
+                        "value": "http.response.status_code"
+                    },
+                    "displayedFields": [
+                        "service_name"
+                    ]
+                },
+                "unitsOverrides": [
+                    {
+                        "identifier": "dt.ingest.size",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": null,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1765550134229
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "6": {
+            "title": "Service count",
+            "type": "data",
+            "query": "fetch dt.entity.service\n| expand managementZones\n| filter managementZones == $MZ //AND entity.name == $service_name\n| summarize count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "7": {
+            "title": "Service count",
+            "type": "data",
+            "query": "fetch dt.entity.service\n| expand managementZones\n| filter managementZones == $MZ \n//AND entity.name == $service_name\n\n",
+            "visualization": "honeycomb",
+            "visualizationSettings": {
+                "honeycomb": {
+                    "legend": {
+                        "position": "right"
+                    },
+                    "truncationMode": "middle",
+                    "dataMappings": {
+                        "value": "entity.name"
+                    },
+                    "displayedFields": [
+                        "entity.name"
+                    ]
+                }
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "8": {
+            "title": "Erros 4xx service",
+            "type": "data",
+            "query": "fetch spans\n| filter http.response.status_code >= 400 AND http.response.status_code <= 499\n| filter matchesValue(entityAttr(dt.entity.service, \"managementZones\"), $MZ)\n//| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)\n| summarize total_errors = count()\n| fields total_errors\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "total_errors"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "interval",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1760637871718
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "9": {
+            "title": "📊 Sem problemas ativos",
+            "type": "data",
+            "query": "fetch dt.entity.service\n| expand managementZones\n| filter managementZones == $MZ //AND entity.name == $service_name\n| lookup [\n    fetch dt.davis.problems\n    \n| filter event.status == \"ACTIVE\"\n    \n| expand affected_entity_ids\n], sourceField:id, lookupField:affected_entity_ids\n| fieldsAdd affected = if(isNotNull(lookup.affected_entity_ids), \"yes\", else: \"no\")\n| summarize total = count(), ok = countIf(affected == \"no\")\n| fieldsAdd percent_ok = round((ok / total) * 100, decimals: 2)\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "percent_ok"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "percent_ok",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 99
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 95
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 90
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "percent_ok",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "%",
+                        "delimiter": false,
+                        "added": 1761250819756
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "10": {
+            "title": "APDEX Service",
+            "type": "data",
+            "query": "timeseries by: {dt.entity.service},\n\n  count = sum(dt.service.request.count, filter: {\n\n    failed == false \n\n    AND in(entityName(dt.entity.service), $service_name)\n\n    AND matchesValue(entityAttr(dt.entity.service, \"managementZones\"), $MZ)\n\n  }),\n\n  count_0 = sum(dt.service.request.count, filter: {\n\n    matchesValue(entityAttr(dt.entity.service, \"managementZones\"), $MZ)\n\n  })\n\n| fieldsAdd success_percent = round(100 * count[] / count_0[], decimals: 2)\n\n| fieldsAdd service_name = entityName(dt.entity.service)\n\n| fieldsRemove count_0, count",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "dataMapping": {
+                    "displayedFields": [
+                        "service_name"
+                    ]
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "success_percent",
+                        "unitCategory": "percentage",
+                        "baseUnit": "percent",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1761595592022
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "11": {
+            "title": "Top 5 request com mais falha",
+            "type": "data",
+            "query": "fetch spans\n| fieldsAdd service_name = entityName(dt.entity.service)\n| filter request.is_root_span == true\n  AND isNotNull(endpoint.name)\n  AND service_name == $service_name\n\n// multiplicity (sampling)\n| fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd sampling.multiplicity = 1/sampling.probability\n| fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n\n| summarize {\n    avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n    duration_p90 = percentile(duration, 90),\n    duration_p95 = percentile(duration, 95),\n    duration_p99 = percentile(duration, 99),\n    count        = sum(multiplicity),\n    failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n    failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n  }, by: { endpoint.name, dt.system.sampling_ratio }\n| fieldsAdd level = 0\n| sort failed desc          // <--- aqui muda para “mais falha”\n| limit 5\n| append [\n    fetch spans, from: -2h, samplingRatio: 1, scanLimitGBytes: 250\n    | filter request.is_root_span == true AND isNotNull(endpoint.name)\n    | filter in(dt.entity.service, classicEntitySelector(\"type(service), entityname.equals(\\\"demoxxxx \\\")\"))\n    | fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n    | fieldsAdd sampling.multiplicity = 1/sampling.probability\n    | fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n    | summarize {\n        avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n        duration_p90 = percentile(duration, 90),\n        duration_p95 = percentile(duration, 95),\n        duration_p99 = percentile(duration, 99),\n        count        = sum(multiplicity),\n        failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n        failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n      }, by: { endpoint.name, url.path }\n    | fieldsAdd level = 1\n    | sort failed desc      // ordena por falha dentro do bloco\n    | limit 5\n]\n// corte global: 5 endpoints com maior número de falhas somando os dois níveis\n| sort failed desc\n| limit 5\n",
+            "visualization": "categoricalBarChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "hidden": true
+                    },
+                    "categoricalBarChartSettings": {
+                        "categoryAxis": [
+                            "endpoint.name"
+                        ],
+                        "valueAxis": [
+                            "count"
+                        ],
+                        "layout": "vertical"
+                    }
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "12": {
+            "title": "TOP 5 request mais usada",
+            "type": "data",
+            "query": "fetch spans\n| fieldsAdd service_name = entityName(dt.entity.service)\n| filter request.is_root_span == true\n  AND isNotNull(endpoint.name)\n  AND service_name == $service_name\n\n// multiplicity\n| fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd sampling.multiplicity = 1/sampling.probability\n| fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n\n| summarize {\n    avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n    duration_p90 = percentile(duration, 90),\n    duration_p95 = percentile(duration, 95),\n    duration_p99 = percentile(duration, 99),\n    count        = sum(multiplicity),\n    failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n    failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n  }, by: { endpoint.name, dt.system.sampling_ratio }\n| fieldsAdd level = 0\n| sort count desc\n| limit 5\n| append [\n    fetch spans, from: -2h, samplingRatio: 1, scanLimitGBytes: 250\n    | filter request.is_root_span == true AND isNotNull(endpoint.name)\n    | filter in(dt.entity.service, classicEntitySelector(\"type(service), entityname.equals(\\\"demoxxx)\\\")\"))\n    | fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n    | fieldsAdd sampling.multiplicity = 1/sampling.probability\n    | fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n    | summarize {\n        avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n        duration_p90 = percentile(duration, 90),\n        duration_p95 = percentile(duration, 95),\n        duration_p99 = percentile(duration, 99),\n        count        = sum(multiplicity),\n        failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n        failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n      }, by: { endpoint.name, url.path }\n    | fieldsAdd level = 1\n    | sort count desc\n    | limit 5\n]\n// AQUI é o corte global: 5 endpoints mais usados de todos os níveis\n| sort count desc\n| limit 5\n",
+            "visualization": "categoricalBarChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "hidden": true
+                    },
+                    "categoricalBarChartSettings": {
+                        "isCategoryLabelVisible": false,
+                        "valueAxis": [
+                            "count"
+                        ],
+                        "layout": "vertical"
+                    }
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "13": {
+            "title": "Top 5 De request mais lenta",
+            "type": "data",
+            "query": "fetch spans\n| fieldsAdd service_name = entityName(dt.entity.service)\n| filter request.is_root_span == true\n  AND isNotNull(endpoint.name)\n  AND service_name == $service_name\n\n// multiplicity (sampling)\n| fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n| fieldsAdd sampling.multiplicity = 1/sampling.probability\n| fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n\n| summarize {\n    avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n    duration_p90 = percentile(duration, 90),\n    duration_p95 = percentile(duration, 95),\n    duration_p99 = percentile(duration, 99),\n    count        = sum(multiplicity),\n    failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n    failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n  }, by: { endpoint.name, dt.system.sampling_ratio }\n| fieldsAdd level = 0\n| sort duration_p95 desc          // <--- ordena pela lentidão (p95)\n| limit 5\n| append [\n    fetch spans, from: -2h, samplingRatio: 1, scanLimitGBytes: 250\n    | filter request.is_root_span == true AND isNotNull(endpoint.name)\n    | filter in(dt.entity.service, classicEntitySelector(\"type(service), entityname.equals(\\\"demo\\\")\"))\n    | fieldsAdd sampling.probability  = (power(2, 56) - coalesce(sampling.threshold, 0)) * power(2, -56)\n    | fieldsAdd sampling.multiplicity = 1/sampling.probability\n    | fieldsAdd multiplicity          = coalesce(sampling.multiplicity, 1) * coalesce(aggregation.count, 1) * dt.system.sampling_ratio\n    | summarize {\n        avg_duration = sum(coalesce(aggregation.duration_sum / aggregation.count, duration) * multiplicity) / sum(multiplicity),\n        duration_p90 = percentile(duration, 90),\n        duration_p95 = percentile(duration, 95),\n        duration_p99 = percentile(duration, 99),\n        count        = sum(multiplicity),\n        failed       = sum(if(request.is_failed, multiplicity, else: 0)),\n        failure_rate = round(toDouble(sum(if(request.is_failed, multiplicity, else: 0)) / sum(multiplicity)), decimals: 3)\n      }, by: { endpoint.name, url.path }\n    | fieldsAdd level = 1\n    | sort duration_p95 desc       \n    | limit 5\n]\n| sort duration_p95 desc           \n| limit 5\n",
+            "visualization": "categoricalBarChart",
+            "visualizationSettings": {
+                "chartSettings": {
+                    "legend": {
+                        "hidden": true
+                    },
+                    "categoricalBarChartSettings": {
+                        "categoryAxis": [
+                            "endpoint.name"
+                        ],
+                        "valueAxis": [
+                            "count"
+                        ],
+                        "layout": "vertical"
+                    }
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "15": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Requests por Service\")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "17": {
+            "title": "Status por request",
+            "type": "data",
+            "query": "fetch spans\n| filter (\n   (\n   http.response.status_code >= 200 AND http.response.status_code <= 299\n   OR http.response.status_code >= 400 AND http.response.status_code <= 499\n   OR http.response.status_code >= 500 AND http.response.status_code <= 599\n   \n   )\n   \n)\n| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)",
+            "visualization": "honeycomb",
+            "visualizationSettings": {
+                "honeycomb": {
+                    "dataMappings": {
+                        "value": "http.response.status_code"
+                    },
+                    "displayedFields": [
+                        "service_name"
+                    ],
+                    "colorMode": "custom-colors",
+                    "customColors": [
+                        {
+                            "id": 10031748.799999952,
+                            "value": 200,
+                            "color": {
+                                "Default": "var(--dt-colors-charts-categorical-themed-swamps-color-01-default, #006650)"
+                            },
+                            "comparator": "≥"
+                        },
+                        {
+                            "id": 10037524.299999952,
+                            "value": 400,
+                            "color": {
+                                "Default": "var(--dt-colors-charts-apdex-fair-default, #a9780f)"
+                            },
+                            "comparator": "≥"
+                        },
+                        {
+                            "id": 8316410.900000006,
+                            "value": 500,
+                            "color": "#b3007d",
+                            "comparator": "≥"
+                        }
+                    ]
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "dt.ingest.size",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": null,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1765550134229
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "18": {
+            "title": "Erros 4xx service",
+            "type": "data",
+            "query": "fetch spans\n| filter http.response.status_code >= 400 AND http.response.status_code <= 499\n| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)\n| summarize total_errors = count()\n| fields total_errors\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "total_errors"
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "interval",
+                        "unitCategory": "time",
+                        "baseUnit": "nanosecond",
+                        "displayUnit": null,
+                        "decimals": 2,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1760637871718
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "19": {
+            "title": "Service count",
+            "type": "data",
+            "query": "fetch dt.entity.service\n| expand managementZones\n|filter  entity.name == $service_name\n| summarize count()\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "20": {
+            "title": "Erros 5xx ",
+            "type": "data",
+            "query": "fetch spans\n| filter http.response.status_code >= 500 AND http.response.status_code <= 599\n| filter in(entityName(dt.entity.service), $service_name)\n| fieldsAdd service_name = entityName(dt.entity.service)\n| summarize total_errors = count()\n| fields total_errors\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "total_errors",
+                    "sparklineSettings": {
+                        "isVisible": false
+                    },
+                    "trend": {
+                        "isVisible": false
+                    }
+                },
+                "autoSelectVisualization": false,
+                "unitsOverrides": [
+                    {
+                        "identifier": "value.A",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "count",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "",
+                        "delimiter": false,
+                        "added": 1760637871718
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "21": {
+            "title": "% Sem Alertas ",
+            "type": "data",
+            "query": "fetch dt.entity.service\n| expand managementZones\n|filter  entity.name == $service_name\n| lookup [\n    fetch dt.davis.problems\n    \n| filter event.status == \"ACTIVE\"\n    \n| expand affected_entity_ids\n], sourceField:id, lookupField:affected_entity_ids\n| fieldsAdd affected = if(isNotNull(lookup.affected_entity_ids), \"yes\", else: \"no\")\n| summarize total = count(), ok = countIf(affected == \"no\")\n| fieldsAdd percent_ok = round((ok / total) * 100, decimals: 2)\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "recordField": "percent_ok"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "percent_ok",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-ideal-default, #2f6862)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 99
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eea53c)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 95
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c62239)"
+                                },
+                                "comparator": "≥",
+                                "label": "",
+                                "value": 90
+                            }
+                        ]
+                    }
+                ],
+                "unitsOverrides": [
+                    {
+                        "identifier": "percent_ok",
+                        "unitCategory": "unspecified",
+                        "baseUnit": "none",
+                        "displayUnit": null,
+                        "decimals": 0,
+                        "suffix": "%",
+                        "delimiter": false,
+                        "added": 1761250819756
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "26": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Span\")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    },
+                    "prefixIcon": "AiIcon"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "27": {
+            "title": "Status OK and NOK",
+            "type": "data",
+            "query": "fetch spans, from: @d, samplingRatio: 1, scanLimitGBytes: 500\n\n// filtro por service via variável\n| filter in(\n    dt.entity.service,\n    classicEntitySelector(\n      concat(\n        \"type(service), entityname.equals(\\\"\",\n        $service_name,\n        \"\\\")\"\n      )\n    )\n  )\n\n// filtro por span via variável\n| filter span.name == $span_name\n\n// manter filtro de N4\n| filterOut isNotNull(supportability.flaws)\n    and iAny(supportability.flaws[] == \"N4\")\n\n// calculate raw multiplicity based on sampling\n| fieldsAdd multiplicity =\n    coalesce(sampling.multiplicity, 1)\n    * coalesce(aggregation.count, 1)\n    * dt.system.sampling_ratio\n\n// construct fields\n| fieldsAdd span.status_code =\n    if(\n      span.status_code == \"error\"\n      OR span.is_exit_by_exception,\n      \"Error\",\n      else: \"Ok\"\n    )\n\n// for multiplicity (due to sampling) sum() needs to be used instead of count()\n| fieldsAdd\n    failedIf = if(span.status_code == \"Error\", multiplicity, else: 0),\n    successIf = if(span.status_code == \"Ok\", multiplicity, else: 0)\n\n// timeseries\n| makeTimeseries {\n    failure = sum(failedIf, default: 0),\n    success = sum(successIf, default: 0)\n  }, bins: 120, by: { dt.system.sampling_ratio }\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "28": {
+            "title": "response Time",
+            "type": "data",
+            "query": "fetch spans, from: @d, samplingRatio: 1, scanLimitGBytes: 500\n\n// filtro por service via variável\n| filter in(\n    dt.entity.service,\n    classicEntitySelector(\n      concat(\n        \"type(service), entityname.equals(\\\"\",\n        $service_name,\n        \"\\\")\"\n      )\n    )\n  )\n\n// filtro por span via variável\n| filter span.name == $span_name\n\n// manter filtro de N4\n| filterOut isNotNull(supportability.flaws)\n    and iAny(supportability.flaws[] == \"N4\")\n\n// calculate raw multiplicity based on sampling\n| fieldsAdd multiplicity =\n    coalesce(sampling.multiplicity, 1)\n    * coalesce(aggregation.count, 1)\n    * dt.system.sampling_ratio\n\n// construct fields\n| fieldsAdd span.status_code =\n    if(\n      span.status_code == \"error\"\n      OR span.is_exit_by_exception,\n      \"Error\",\n      else: \"Ok\"\n    )\n\n// for multiplicity (due to sampling) sum() needs to be used instead of count()\n| fieldsAdd\n    failedIf = if(span.status_code == \"Error\", multiplicity, else: 0),\n    successIf = if(span.status_code == \"Ok\", multiplicity, else: 0)\n\n// timeseries\n| makeTimeseries {\n\n    avg = avg(duration),\n    p50 = median(duration),\n    p90 = percentile(duration, 90)\n  }, bins: 120, by: { dt.system.sampling_ratio }\n",
+            "visualization": "lineChart",
+            "visualizationSettings": {
+                "autoSelectVisualization": true
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "29": {
+            "title": "AVG Response time do span name",
+            "type": "data",
+            "query": "fetch spans, from: @d, samplingRatio: 1, scanLimitGBytes: 500\n\n// filtro por service via variável\n| filter in(\n    dt.entity.service,\n    classicEntitySelector(\n      concat(\n        \"type(service), entityname.equals(\\\"\",\n        $service_name,\n        \"\\\")\"\n      )\n    )\n  )\n\n// filtro por span via variável\n| filter span.name == $span_name\n\n// opcional: limitar ruído\n| fieldsAdd span.source =\n    if(\n      isNotNull(dt.agent.module.id)\n      or matchesValue(telemetry.exporter.name, \"odin\")\n      or matchesValue(telemetry.sdk.name, \"oneagent\")\n      or matchesValue(dt.openpipeline.source, \"oneagent\"),\n      \"OneAgent\",\n      else: \"OpenTelemetry\"\n    )\n\n// métrica do card\n| summarize avg_duration = avg(duration)\n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "30": {
+            "title": "Total de span_name",
+            "type": "data",
+            "query": "fetch spans, samplingRatio: 1, scanLimitGBytes: 500\n\n| filter in(\n    dt.entity.service,\n    classicEntitySelector(\n      concat(\n        \"type(service), entityname.equals(\\\"\",\n        $service_name,\n        \"\\\")\"\n      )\n    )\n  )and matchesValue(`span.name`,$span_name)\n\n| fieldsAdd span.source =\n    if(\n      isNotNull(dt.agent.module.id)\n      or matchesValue(telemetry.exporter.name, \"odin\")\n      or matchesValue(telemetry.sdk.name, \"oneagent\")\n      or matchesValue(dt.openpipeline.source, \"oneagent\"),\n      \"OneAgent\",\n      else: \"OpenTelemetry\"\n    )\n\n| summarize dummy = count(), by: value = span.name\n\n\n\n    \n",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none"
+                },
+                "autoSelectVisualization": false
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "31": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Services\")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    },
+                    "prefixIcon": "ServicesIcon"
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "34": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "35": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "36": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "37": {
+            "type": "markdown",
+            "content": "[Frontend](https://gph84065.apps.dynatrace.com/ui/document/v0/#share=41e4813a-52ea-4ee3-966a-ad77a0105df0)\n\n[Geral](https://gph84065.apps.dynatrace.com/ui/document/v0/#share=60bc67e9-3880-4a57-9508-050f93d3f492)\n\n[Relatorio de Problemas](https://gph84065.apps.dynatrace.com/ui/document/v0/#share=9132ba7c-634a-4a60-a8c7-b9890ec841f5)"
+        },
+        "38": {
+            "type": "markdown",
+            "content": "--- \n "
+        },
+        "39": {
+            "title": "",
+            "type": "data",
+            "query": "data record(a= \"Services  \")",
+            "visualization": "singleValue",
+            "visualizationSettings": {
+                "singleValue": {
+                    "labelMode": "none",
+                    "label": "a",
+                    "recordField": "a",
+                    "isIconVisible": true,
+                    "trend": {
+                        "isVisible": true
+                    }
+                },
+                "autoSelectVisualization": false,
+                "thresholds": [
+                    {
+                        "id": 1,
+                        "field": "a",
+                        "title": "",
+                        "isEnabled": true,
+                        "rules": [
+                            {
+                                "id": 0,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-categorical-themed-blue-steel-color-04-default, #8b6ecf)"
+                                },
+                                "comparator": "!=",
+                                "label": "",
+                                "value": "a"
+                            },
+                            {
+                                "id": 1,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-warning-default, #eca440)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            },
+                            {
+                                "id": 2,
+                                "color": {
+                                    "Default": "var(--dt-colors-charts-status-critical-default, #c4233b)"
+                                },
+                                "comparator": "≥",
+                                "label": ""
+                            }
+                        ]
+                    }
+                ]
+            },
+            "querySettings": {
+                "maxResultRecords": 1000,
+                "defaultScanLimitGbytes": 500,
+                "maxResultMegaBytes": 1,
+                "defaultSamplingRatio": 10,
+                "enableSampling": false
+            },
+            "davis": {
+                "enabled": false,
+                "davisVisualization": {
+                    "isAvailable": true
+                }
+            }
+        },
+        "40": {
+            "type": "markdown",
+            "content": "--- \n "
+        }
+    },
+    "layouts": {
+        "1": {
+            "x": 3,
+            "y": 9,
+            "w": 6,
+            "h": 1
+        },
+        "3": {
+            "x": 3,
+            "y": 3,
+            "w": 5,
+            "h": 1
+        },
+        "4": {
+            "x": 7,
+            "y": 12,
+            "w": 3,
+            "h": 2
+        },
+        "5": {
+            "x": 0,
+            "y": 10,
+            "w": 7,
+            "h": 4
+        },
+        "6": {
+            "x": 7,
+            "y": 4,
+            "w": 3,
+            "h": 2
+        },
+        "7": {
+            "x": 0,
+            "y": 4,
+            "w": 7,
+            "h": 5
+        },
+        "8": {
+            "x": 7,
+            "y": 10,
+            "w": 3,
+            "h": 2
+        },
+        "9": {
+            "x": 7,
+            "y": 7,
+            "w": 3,
+            "h": 2
+        },
+        "10": {
+            "x": 18,
+            "y": 3,
+            "w": 6,
+            "h": 4
+        },
+        "11": {
+            "x": 20,
+            "y": 10,
+            "w": 4,
+            "h": 4
+        },
+        "12": {
+            "x": 12,
+            "y": 10,
+            "w": 4,
+            "h": 4
+        },
+        "13": {
+            "x": 16,
+            "y": 10,
+            "w": 4,
+            "h": 4
+        },
+        "15": {
+            "x": 12,
+            "y": 2,
+            "w": 12,
+            "h": 1
+        },
+        "17": {
+            "x": 12,
+            "y": 3,
+            "w": 6,
+            "h": 4
+        },
+        "18": {
+            "x": 18,
+            "y": 7,
+            "w": 3,
+            "h": 3
+        },
+        "19": {
+            "x": 12,
+            "y": 7,
+            "w": 3,
+            "h": 3
+        },
+        "20": {
+            "x": 21,
+            "y": 7,
+            "w": 3,
+            "h": 3
+        },
+        "21": {
+            "x": 15,
+            "y": 7,
+            "w": 3,
+            "h": 3
+        },
+        "26": {
+            "x": 0,
+            "y": 15,
+            "w": 24,
+            "h": 1
+        },
+        "27": {
+            "x": 0,
+            "y": 16,
+            "w": 6,
+            "h": 5
+        },
+        "28": {
+            "x": 6,
+            "y": 16,
+            "w": 7,
+            "h": 5
+        },
+        "29": {
+            "x": 19,
+            "y": 16,
+            "w": 5,
+            "h": 3
+        },
+        "30": {
+            "x": 14,
+            "y": 16,
+            "w": 5,
+            "h": 3
+        },
+        "31": {
+            "x": 0,
+            "y": 2,
+            "w": 10,
+            "h": 1
+        },
+        "34": {
+            "x": 0,
+            "y": 21,
+            "w": 10,
+            "h": 1
+        },
+        "35": {
+            "x": 7,
+            "y": 6,
+            "w": 3,
+            "h": 1
+        },
+        "36": {
+            "x": 0,
+            "y": 14,
+            "w": 10,
+            "h": 1
+        },
+        "37": {
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2
+        },
+        "38": {
+            "x": 16,
+            "y": 0,
+            "w": 8,
+            "h": 2
+        },
+        "39": {
+            "x": 7,
+            "y": 0,
+            "w": 9,
+            "h": 2
+        },
+        "40": {
+            "x": 0,
+            "y": 22,
+            "w": 4,
+            "h": 1
+        }
+    },
+    "importedWithCode": false,
+    "settings": {}
+}
