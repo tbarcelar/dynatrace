@@ -1,0 +1,12 @@
+{
+  "name": "{{ .name }}",
+  "rules": [
+    {
+      "type": "SELECTOR",
+      "enabled": true,
+      "valueFormat": "{{ .tag_value }}",
+      "valueNormalization": "Leave text as-is",
+      "entitySelector": "type(CLOUD_APPLICATION),entityName.contains(\"demo\")"
+    }
+
+}

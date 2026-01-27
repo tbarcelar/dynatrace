@@ -1,0 +1,12 @@
+configs:
+- id: mz-plataforma-digital
+  type:
+    settings:
+      schema: builtin:management-zones
+      scope: environment
+  config:
+    name: "demo"
+    skip: false
+    template: management-zone.json
+    parameters:
+      mz_name: "demo_mz"

@@ -1,0 +1,16 @@
+configs:
+
+ 
+- id: log-demo
+  type:
+    settings:
+      schema: builtin:logmonitoring.log-storage-settings
+      scope: KUBERNETES_CLUSTER-xxxx
+  config:
+    name: "demoxxx"
+    skip: true  
+    template: rule.json
+    parameters:
+      enabled: true
+      namespace: "demoxxx"
+ 

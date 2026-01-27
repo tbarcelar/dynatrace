@@ -1,0 +1,13 @@
+configs:
+- id: tagdemo
+  type:
+    settings:
+      schema: builtin:tags.auto-tagging
+      scope: environment
+  config:
+    name: "titulo demo"
+    skip: true  
+    template: tag
+    parameters:
+      tag_value: "valor tag"
+ 

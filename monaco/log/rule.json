@@ -1,0 +1,23 @@
+{
+  "enabled": {{ .enabled }},
+  "config-item-title": "{{ .name }}",
+  "matchers": [
+    {
+      "attribute": "k8s.namespace.name",
+      "operator": "MATCHES",
+      "values": ["{{ .namespace }}"]
+    },
+    {
+      "attribute": "k8s.container.name",
+      "operator": "MATCHES",
+      "values": ["{{ .container }}"]
+    },
+    {
+      "attribute": "k8s.pod.annotation",
+      "operator": "MATCHES",
+      "values": ["oneagent.dynatrace.com/injected=true"]
+    }
+  ],
+  "send-to-storage": true
+}
+ 

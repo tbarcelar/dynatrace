@@ -1,0 +1,11 @@
+{
+  "name": "{{ .mz_name }}",
+  "description": "criando mz pelo monaco",
+  "rules": [
+    {
+      "enabled": true,
+      "type": "SELECTOR",
+      "entitySelector": "type(SERVICE),tag(\"nomeda_tag:tag\\:tag_valor\")"
+    }
+  ]
+}

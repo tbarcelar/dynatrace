@@ -1,0 +1,18 @@
+manifestVersion: "1.0"
+
+projects:
+
+- name: log
+- name: tags
+- name: mz
+
+environmentGroups:
+- name: default
+  environments:
+  - name: prd
+    url:
+      type: environment
+      value: DT_URL
+    auth:
+      token:
+        name: DT_TOKEN
